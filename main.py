@@ -60,7 +60,7 @@ class QuizManager:
     def __init__(self):
         self.sections = [QuizSection(i) for i in range(1, 5)]
         self.user = None
-        self.time_limit = 600  # 10 minutes (600 seconds)
+        self.time_limit = 20  # 10 minutes (600 seconds)
         self.start_time = None
         self.results = {}
 
@@ -178,7 +178,7 @@ class QuizManager:
                 remaining_seconds = self.check_time_remaining()
                 if remaining_seconds <= 0:
                     print("\nTime's up!")
-                    self.calculate_final_results()
+                    self.calculate_final_results(time_up=True)
                     return
                 
                 print(f"\nTime remaining: {remaining_seconds} seconds")
@@ -191,7 +191,12 @@ class QuizManager:
         
         self.calculate_final_results()
 
-    def calculate_final_results(self):
+    def calculate_final_results(self, time_up=False):
+        if not self.results:
+            print("\nTime's up! No sections were completed.")
+            self.save_results(overall_score=0)  # No sections completed
+            return
+        
         overall_score = sum(self.results.values()) / len(self.results)
         passed = overall_score >= 75 and all(score >= 75 for score in self.results.values())
         
@@ -201,20 +206,24 @@ class QuizManager:
         print(f"\nOverall Score: {overall_score:.2f}%")
         print(f"Final Status: {'PASSED' if passed else 'FAILED'}")
         
-        self.save_results()
+        if time_up:
+            print("Note: The quiz ended because the time limit was reached.")
+        
+        self.save_results(overall_score)
 
-    def save_results(self):
+    def save_results(self, overall_score=0):
         results_data = {
             "user": asdict(self.user),
             "date": datetime.now().isoformat(),
             "results": self.results,
-            "overall_score": sum(self.results.values()) / len(self.results)
+            "overall_score": overall_score
         }
         
         os.makedirs("results", exist_ok=True)
         filename = f"results/{self.user.name.lower()}_{self.user.surname.lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(results_data, f, indent=4)
+
 
 if __name__ == "__main__":
     quiz_manager = QuizManager()
