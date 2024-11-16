@@ -60,7 +60,7 @@ class QuizManager:
     def __init__(self):
         self.sections = [QuizSection(i) for i in range(1, 5)]
         self.user = None
-        self.time_limit = 3600  # 1 hour in seconds
+        self.time_limit = 600  # 10 dakika (600 saniye)
         self.start_time = None
         self.results = {}
 
@@ -164,7 +164,7 @@ class QuizManager:
         print("- Sınav 4 bölümden oluşmaktadır")
         print("- Her bölümde 5 soru bulunmaktadır")
         print("- Her bölümden geçmek için en az %75 başarı gereklidir")
-        print("- Tüm sınavı tamamlamak için 1 saatiniz vardır")
+        print(f"- Tüm sınavı tamamlamak için {self.time_limit} saniyeniz vardır")
         print("\nSınavı başlatmak için Enter'a basın...")
         input()
         
@@ -175,15 +175,15 @@ class QuizManager:
             print(f"\n=== Bölüm {section.section_number} ===")
             
             for question in section.current_questions:
-                remaining_time = self.check_time_remaining()
-                if remaining_time <= 0:
+                remaining_seconds = self.check_time_remaining()
+                if remaining_seconds <= 0:
                     print("\nSüre doldu!")
                     self.calculate_final_results()
                     return
                 
-                print(f"\nKalan süre: {remaining_time // 360} dakika")
+                print(f"\nKalan süre: {remaining_seconds} saniye")
                 answer = self.present_question(question)
-                section.user_answers[question.id] = answer  # Changed to use question.id
+                section.user_answers[question.id] = answer
             
             section_score = section.calculate_score()
             self.results[f"Bölüm {section.section_number}"] = section_score
