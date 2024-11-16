@@ -60,7 +60,7 @@ class QuizManager:
     def __init__(self):
         self.sections = [QuizSection(i) for i in range(1, 5)]
         self.user = None
-        self.time_limit = 600  # 10 dakika (600 saniye)
+        self.time_limit = 600  # 10 minutes (600 seconds)
         self.start_time = None
         self.results = {}
 
@@ -113,81 +113,81 @@ class QuizManager:
         return max(0, self.time_limit - elapsed_time)
 
     def present_question(self, question: Question) -> Union[str, List[str]]:
-        print(f"\nSoru: {question.text}")
+        print(f"\nQuestion: {question.text}")
         
         if question.type == "true_false":
-            print("1. Doğru")
-            print("2. Yanlış")
+            print("1. True")
+            print("2. False")
             while True:
                 try:
-                    answer = input("Cevabınız (1 veya 2): ").strip()
+                    answer = input("Your answer (1 or 2): ").strip()
                     if answer in ['1', '2']:
                         return answer
-                    print("Lütfen 1 (Doğru) veya 2 (Yanlış) girin.")
+                    print("Please enter 1 (True) or 2 (False).")
                 except ValueError:
-                    print("Geçersiz giriş. Lütfen tekrar deneyin.")
+                    print("Invalid input. Please try again.")
         
         elif question.type == "single_choice":
             for i, option in enumerate(question.options, 1):
                 print(f"{i}. {option}")
             while True:
                 try:
-                    answer = input("Cevabınız (numarayı girin): ").strip()
+                    answer = input("Your answer (enter number): ").strip()
                     if answer.isdigit() and 1 <= int(answer) <= len(question.options):
                         return answer
-                    print(f"Lütfen 1 ile {len(question.options)} arasında bir sayı girin.")
+                    print(f"Please enter a number between 1 and {len(question.options)}.")
                 except ValueError:
-                    print("Geçersiz giriş. Lütfen tekrar deneyin.")
+                    print("Invalid input. Please try again.")
         
         else:  # MULTIPLE_CHOICE
             for i, option in enumerate(question.options, 1):
                 print(f"{i}. {option}")
             while True:
                 try:
-                    answer = input("Cevaplarınız (numaraları virgülle ayırarak girin): ").strip()
+                    answer = input("Your answers (enter numbers separated by commas): ").strip()
                     answers = [int(a.strip()) for a in answer.split(',')]
                     if all(1 <= a <= len(question.options) for a in answers):
                         return answers
-                    print(f"Lütfen 1 ile {len(question.options)} arasında geçerli sayılar girin.")
+                    print(f"Please enter valid numbers between 1 and {len(question.options)}.")
                 except ValueError:
-                    print("Geçersiz giriş. Lütfen tekrar deneyin.")
+                    print("Invalid input. Please try again.")
 
     def run_quiz(self):
-        print("Çoklu Bölümlü Sınav Uygulamasına Hoş Geldiniz")
-        name = input("Adınız: ").strip()
-        surname = input("Soyadınız: ").strip()
+        print("Welcome to Multi-Section Quiz Application")
+        name = input("Name: ").strip()
+        surname = input("Surname: ").strip()
         
         if not self.register_user(name, surname):
             return
         
-        print("\nSınav Talimatları:")
-        print("- Sınav 4 bölümden oluşmaktadır")
-        print("- Her bölümde 5 soru bulunmaktadır")
-        print("- Her bölümden geçmek için en az %75 başarı gereklidir")
-        print(f"- Tüm sınavı tamamlamak için {self.time_limit} saniyeniz vardır")
-        print("\nSınavı başlatmak için Enter'a basın...")
+        print("\nExam Instructions:")
+        print("- The exam consists of 4 sections")
+        print("- Each section has 5 questions")
+        print("- You need at least 75% success rate to pass each section")
+        print(f"- You have {self.time_limit} seconds to complete the entire exam")
+        print("\nPress Enter to start the exam...")
         input()
         
         self.start_time = time.time()
         
         for section in self.sections:
             section.select_random_questions()
-            print(f"\n=== Bölüm {section.section_number} ===")
+            print(f"\n=== Section {section.section_number} ===")
             
             for question in section.current_questions:
                 remaining_seconds = self.check_time_remaining()
                 if remaining_seconds <= 0:
-                    print("\nSüre doldu!")
+                    print("\nTime's up!")
                     self.calculate_final_results()
                     return
                 
-                print(f"\nKalan süre: {remaining_seconds} saniye")
+                print(f"\nTime remaining: {remaining_seconds} seconds")
                 answer = self.present_question(question)
                 section.user_answers[question.id] = answer
             
             section_score = section.calculate_score()
-            self.results[f"Bölüm {section.section_number}"] = section_score
-            print(f"\nBölüm {section.section_number} Puanı: {section_score:.2f}%")
+            self.results[f"Section {section.section_number}"] = section_score
+            print(f"\nSection {section.section_number} Score: {section_score:.2f}%")
         
         self.calculate_final_results()
 
@@ -195,11 +195,11 @@ class QuizManager:
         overall_score = sum(self.results.values()) / len(self.results)
         passed = overall_score >= 75 and all(score >= 75 for score in self.results.values())
         
-        print("\n=== Final Sonuçları ===")
+        print("\n=== Final Results ===")
         for section, score in self.results.items():
             print(f"{section}: {score:.2f}%")
-        print(f"\nGenel Puan: {overall_score:.2f}%")
-        print(f"Final Durumu: {'GEÇTİ' if passed else 'KALDI'}")
+        print(f"\nOverall Score: {overall_score:.2f}%")
+        print(f"Final Status: {'PASSED' if passed else 'FAILED'}")
         
         self.save_results()
 
