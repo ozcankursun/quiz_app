@@ -44,21 +44,25 @@ class QuizSection:
         self.current_questions = random.sample(self.questions, count)
 
     def calculate_score(self) -> float:
-        """Calculate the score for the section."""
         total_points = sum(q.points for q in self.current_questions)
         earned_points = 0
-        
+
         for question in self.current_questions:
             if question.id in self.user_answers:
                 user_answer = self.user_answers[question.id]
-                if isinstance(user_answer, list):  # Multiple choice
-                    if sorted(user_answer) == sorted(question.correct_answers):
+                
+                # Eğer çoktan seçmeli ise (liste halinde cevaplar)
+                if isinstance(user_answer, list):
+                    if sorted(map(str, user_answer)) == sorted(map(str, question.correct_answers)):
                         earned_points += question.points
-                else:  # Single choice or True/False
-                    if user_answer == question.correct_answers[0]:
+
+                # Eğer tek cevaplı ise (örneğin doğru-yanlış sorusu)
+                elif isinstance(user_answer, str):
+                    if user_answer.strip() in question.correct_answers:
                         earned_points += question.points
-        
+
         return (earned_points / total_points) * 100 if total_points > 0 else 0.0
+
 
 class QuizManager:
     def __init__(self):
@@ -109,13 +113,15 @@ class QuizManager:
             print("Incorrect password. Please try again.")
             return False
 
+        # Kullanıcıyı güncelle ve son giriş tarihini kaydet
         self.user = User(
             name=name,
             surname=surname,
             hashed_password=stored_password,
             attempt_count=user_data[user_key]["attempt_count"],
-            last_attempt=user_data[user_key]["last_attempt"]
+            last_attempt=datetime.now().isoformat()  # Son giriş tarihi
         )
+        self.save_user_data()  # Güncellenmiş kullanıcı bilgilerini kaydet
         print("Login successful!")
         return True
 
@@ -144,7 +150,6 @@ class QuizManager:
         return max(0, self.time_limit - elapsed_time)
 
     def present_question(self, question: Question) -> Union[str, List[str]]:
-        """Present a question and get the user's answer."""
         print(f"\nQuestion: {question.text}")
         
         if question.type == "true_false":
@@ -154,7 +159,7 @@ class QuizManager:
                 try:
                     answer = input("Your answer (1 or 2): ").strip()
                     if answer in ['1', '2']:
-                        return int(answer)
+                        return answer  # String döndürülüyor
                     print("Please enter 1 (True) or 2 (False).")
                 except ValueError:
                     print("Invalid input. Please try again.")
@@ -166,7 +171,7 @@ class QuizManager:
                 try:
                     answer = input("Your answer (enter number): ").strip()
                     if answer.isdigit() and 1 <= int(answer) <= len(question.options):
-                        return int(answer)
+                        return answer  # String döndürülüyor
                     print(f"Please enter a number between 1 and {len(question.options)}.")
                 except ValueError:
                     print("Invalid input. Please try again.")
@@ -177,9 +182,9 @@ class QuizManager:
             while True:
                 try:
                     answer = input("Your answers (enter numbers separated by commas): ").strip()
-                    answers = [int(a.strip()) for a in answer.split(',')]
-                    if all(1 <= a <= len(question.options) for a in answers):
-                        return answers
+                    answers = [a.strip() for a in answer.split(',')]
+                    if all(a.isdigit() and 1 <= int(a) <= len(question.options) for a in answers):
+                        return answers  # Liste döndürülüyor
                     print(f"Please enter valid numbers between 1 and {len(question.options)}.")
                 except ValueError:
                     print("Invalid input. Please try again.")
@@ -276,30 +281,29 @@ class QuizManager:
             print(f"\nSection {section.section_number} Score: {section_score:.2f}%")
 
         self.calculate_final_results()
-        
+
     def calculate_final_results(self, time_up=False):
-        """Calculate and display final quiz results."""
         if not self.results:
             print("\nTime's up! No sections were completed.")
-            self.save_results(overall_score=0)
+            self.save_results(overall_score=0)  # Hiç bölüm tamamlanmadıysa
             return
         
         overall_score = sum(self.results.values()) / len(self.results)
         passed = overall_score >= 75 and all(score >= 75 for score in self.results.values())
-        
+
         print("\n=== Final Results ===")
         for section, score in self.results.items():
             print(f"{section}: {score:.2f}%")
         print(f"\nOverall Score: {overall_score:.2f}%")
         print(f"Final Status: {'PASSED' if passed else 'FAILED'}")
-        
+
         if time_up:
             print("Note: The quiz ended because the time limit was reached.")
         
         self.save_results(overall_score)
 
+
     def save_results(self, overall_score=0):
-        """Save quiz results to a JSON file."""
         results_data = {
             "user": asdict(self.user),
             "date": datetime.now().isoformat(),
@@ -307,10 +311,16 @@ class QuizManager:
             "overall_score": overall_score
         }
         
+        # Kullanıcının sınav tarihini ve deneme sayısını güncelle
+        self.user.attempt_count += 1
+        self.user.last_attempt = datetime.now().isoformat()
+        self.save_user_data()  # Kullanıcı bilgilerini güncelle
+
         os.makedirs("results", exist_ok=True)
         filename = f"results/{self.user.name.lower()}_{self.user.surname.lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(results_data, f, indent=4)
+
 
 
 if __name__ == "__main__":
