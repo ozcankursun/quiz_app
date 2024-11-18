@@ -23,11 +23,18 @@ def clear_user_data(user_name, user_surname):
         with open(user_file, "w") as f:
             json.dump(users_data, f, indent=4)
 
+def print_filtered_calls(mock_print, keywords=None):
+    """Filter and print mock calls based on keywords."""
+    if keywords is None:
+        keywords = []
+    for call in mock_print.call_args_list:
+        output = call[0][0].strip()  # Remove extra spaces
+        if any(keyword in output.lower() for keyword in keywords):
+            print(output)
 
 def generate_random_answers(question_count):
     """Generate random answers for the questions."""
-    return [str(random.choice([1, 2])) for _ in range(question_count)]
-
+    return [str(random.randint(1, 2)) for _ in range(question_count)]
 
 def test_quiz_simulation():
     user_name = "Test"
@@ -39,66 +46,63 @@ def test_quiz_simulation():
     # QuizManager oluştur
     quiz_manager = QuizManager()
 
-    # Kullanıcı ilk kez teste giriyor
-    user_inputs = [
+    # İlk test denemesi
+    user_inputs_first_attempt = [
+        "1",  # Signup
         user_name,
         user_surname,
-        "",  # "Press Enter to start the exam"
-        *generate_random_answers(5),  # Section 1 yanıtları
-        *generate_random_answers(5),  # Section 2 yanıtları
-        *generate_random_answers(5),  # Section 3 yanıtları
-        *generate_random_answers(5),  # Section 4 yanıtları
+        "password123",  # Password
+        "2",  # Start New Quiz
+        "",  # Press Enter to start
+        *generate_random_answers(5),  # Section 1
+        *generate_random_answers(5),  # Section 2
+        *generate_random_answers(5),  # Section 3
+        *generate_random_answers(5),  # Section 4
+        "3",  # Logout
     ]
-    with patch("builtins.input", side_effect=user_inputs), patch("builtins.print") as mock_print:
+    with patch("builtins.input", side_effect=user_inputs_first_attempt), patch("builtins.print") as mock_print_first:
         quiz_manager.run_quiz()
+    print("\n=== Kullanıcı ilk kez teste giriyor ===")
+    print_filtered_calls(mock_print_first, keywords=["score", "overall", "final status"])
 
-    # Genel skor ve section puanları hesaplama
-    if hasattr(quiz_manager, "results"):
-        overall_score = calculate_overall_score(quiz_manager.results)
-        final_status = "PASSED" if overall_score >= 75 else "FAILED"
-    else:
-        raise AttributeError("QuizManager'da 'results' özelliği bulunamadı.")
-
-    print("\n=== Kullanıcı basariyla kaydoldu ilk kez teste giriyor ve random yanitlar veriyor===")
-    for section, score in quiz_manager.results.items():
-        print(f"{section} Puanı: {score:.2f}%")
-    print(f"Genel Skor: {overall_score:.2f}%")
-    print(f"Final Durum: {final_status}")
-
-    # İkinci deneme
-    user_inputs = [
+    # İkinci test denemesi
+    user_inputs_second_attempt = [
+        "2",  # Signin
         user_name,
         user_surname,
-        "",  # "Press Enter to start the exam"
-        *generate_random_answers(5),  # Section 1 yanıtları
-        *generate_random_answers(5),  # Section 2 yanıtları
-        *generate_random_answers(5),  # Section 3 yanıtları
-        *generate_random_answers(5),  # Section 4 yanıtları
+        "password123",  # Password
+        "2",  # Start New Quiz
+        "",  # Press Enter to start
+        *generate_random_answers(5),  # Section 1
+        *generate_random_answers(5),  # Section 2
+        *generate_random_answers(5),  # Section 3
+        *generate_random_answers(5),  # Section 4
+        "3",  # Logout
     ]
-    with patch("builtins.input", side_effect=user_inputs), patch("builtins.print") as mock_print:
+    with patch("builtins.input", side_effect=user_inputs_second_attempt), patch("builtins.print") as mock_print_second:
+        quiz_manager.run_quiz()
+    print("\n=== Kullanıcı ikinci kez teste giriyor ===")
+    print_filtered_calls(mock_print_second, keywords=["score", "overall", "final status"])
+
+    # Limit kontrol testi
+    user_inputs_limit_check = [
+        "2",  # Signin
+        user_name,
+        user_surname,
+        "password123",  # Password
+        "2",  # Start New Quiz
+    ]
+    with patch("builtins.input", side_effect=user_inputs_limit_check), patch("builtins.print") as mock_print_limit:
         quiz_manager.run_quiz()
 
-    # Genel skor ve section puanları hesaplama
-    if hasattr(quiz_manager, "results"):
-        overall_score = calculate_overall_score(quiz_manager.results)
-        final_status = "PASSED" if overall_score >= 75 else "FAILED"
-    else:
-        raise AttributeError("QuizManager'da 'results' özelliği bulunamadı.")
+    print("\n=== Kullanıcı limitini aşıyor ===")
+    for call in mock_print_limit.call_args_list:
+        print(f"Captured Output: {call[0][0]}")  # Print all captured output
 
-    print("\n=== Kullanıcı ikinci kez teste giriyor ve random yanitlar veriyor===")
-    for section, score in quiz_manager.results.items():
-        print(f"{section} Puanı: {score:.2f}%")
-    print(f"Genel Skor: {overall_score:.2f}%")
-    print(f"Final Durum: {final_status}")
+    # Mesaj kontrolü
+    expected_message = "You have exceeded the maximum number of attempts. You cannot start a new quiz."
+    limit_message_found = any(expected_message.lower() in call[0][0].strip().lower() for call in mock_print_limit.call_args_list)
+    print(f"Limit Message Found: {limit_message_found}")
+    assert limit_message_found, f"Beklenen mesaj bulunamadı: '{expected_message}'"
 
-    # Üçüncü kez test olmaya çalışıyor (limit aşımı)
-    user_inputs = [user_name, user_surname]
-    with patch("builtins.input", side_effect=user_inputs), patch("builtins.print") as mock_print:
-        result = quiz_manager.run_quiz()
 
-    print("\n=== Kullanıcı 3. kez sinava girmek istiyor ve limitini aşıyor ===")
-    if not result:
-        print("Kullanıcı limitini aştığı için teste alınmadı.")
-
-    # Beklenen çıktılar
-    assert True, "Tüm testler başarıyla tamamlandı."

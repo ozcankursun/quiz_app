@@ -2,13 +2,15 @@
     "a_a": {
         "name": "a",
         "surname": "a",
+        "hashed_password": "$2b$12$hhOOA21lxiRLE99lCOUUpOlmLqVV9VhJAxkiz4CsPAtMWBiT.5JAi",
         "attempt_count": 2,
-        "last_attempt": "2024-11-17T11:07:16.046608"
+        "last_attempt": "2024-11-18T15:29:52.915228"
     },
     "test_user": {
         "name": "Test",
         "surname": "User",
+        "hashed_password": "$2b$12$g.YLi6p7bLRYDiWhMVXoaO5g/eqvx76LMgRJf34bOB9cJPlloafZK",
         "attempt_count": 2,
-        "last_attempt": "2024-11-16T11:58:21.772984"
+        "last_attempt": "2024-11-18T16:05:12.645750"
     }
 }
