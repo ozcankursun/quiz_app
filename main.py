@@ -113,15 +113,14 @@ class QuizManager:
             print("Incorrect password. Please try again.")
             return False
 
-        # Kullanıcıyı güncelle ve son giriş tarihini kaydet
+        # Kullanıcı bilgilerini yükle, ancak attempt_count kontrolü sınav başlatma sırasında yapılacak
         self.user = User(
             name=name,
             surname=surname,
             hashed_password=stored_password,
             attempt_count=user_data[user_key]["attempt_count"],
-            last_attempt=datetime.now().isoformat()  # Son giriş tarihi
+            last_attempt=user_data[user_key]["last_attempt"]
         )
-        self.save_user_data()  # Güncellenmiş kullanıcı bilgilerini kaydet
         print("Login successful!")
         return True
 
@@ -251,6 +250,11 @@ class QuizManager:
 
     def start_new_quiz(self):
         """Start a new quiz for the logged-in user."""
+        # Kullanıcı sınav hakkını kontrol et
+        if self.user.attempt_count >= 2:
+            print("\nYou have exceeded the maximum number of attempts. You cannot start a new quiz.")
+            return
+
         print("\nExam Instructions:")
         print("- The exam consists of 4 sections")
         print("- Each section has 5 questions")
