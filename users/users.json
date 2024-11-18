@@ -1,14 +1,9 @@
 {
-    "a_a": {
-        "name": "a",
-        "surname": "a",
-        "attempt_count": 1,
-        "last_attempt": "2024-11-16T11:42:02.176478"
-    },
-    "test_user": {
-        "name": "Test",
-        "surname": "User",
-        "attempt_count": 2,
-        "last_attempt": "2024-11-16T11:58:21.772984"
+    "durak_okur": {
+        "name": "Durak",
+        "surname": "Okur",
+        "hashed_password": "$2b$12$vUWJU8vroCWwjSIbD1UuIu5gP.N4z/S3VTo8rYyC7zXR6tGo3fLiS",
+        "attempt_count": 0,
+        "last_attempt": ""
     }
 }
