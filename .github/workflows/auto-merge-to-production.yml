@@ -6,19 +6,24 @@ on:
       - main
 
 jobs:
-  create-pr:
+  auto-merge:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v2
         with:
           fetch-depth: 0
-          
+      
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          branch: production
+          commit-message: Auto merge main to production
+          title: Auto merge main to production
+          body: |
+            Automatic PR to merge main into production
+          branch: auto-merge-main-to-production
           base: production
-          title: 'Auto PR: Main to Production'
-          body: 'Automated PR from main to production'
-          labels: 'automated-pr'
+          delete-branch: true
