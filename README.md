@@ -31,7 +31,7 @@ A multi-section quiz application with user authentication.
 - quizAppvenv/ - Virtual environment
 - test_main.py - Test cases
 
-## Mentor
+## Mentors
 - Fatih Demir
 - Yavuz Köksal
   
