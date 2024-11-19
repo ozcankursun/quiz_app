@@ -4,7 +4,7 @@ A multi-section quiz application with user authentication.
 
 ## Features
 - Multiple quiz sections
-- User registration and login
+- User registration and login with encryption
 - Score tracking
 - Attempt tracking
 - JSON-based question storage
