@@ -1,9 +1,9 @@
-name: Auto Merge Main to Production
+name: Main to Production
 
 on:
   push:
     branches:
-      - main
+      - Production
 
 jobs:
   auto-merge:
@@ -24,7 +24,7 @@ jobs:
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.PAT_TOKEN }}
-          branch: auto-merge-production
-          base: production
-          title: 'Auto-merge main into production'
-          body: 'Automated PR to merge changes from main into production'
+          branch: main-to-Production
+          base: Production
+          title: 'Main to Production'
+          body: 'Automated PR from main to Production branch'
