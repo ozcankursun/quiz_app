@@ -7,7 +7,6 @@ import os
 from dataclasses import dataclass, asdict
 import bcrypt
 
-#edit
 @dataclass
 class Question:
     id: int
