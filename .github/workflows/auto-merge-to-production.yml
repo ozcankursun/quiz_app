@@ -8,22 +8,23 @@ on:
 jobs:
   auto-merge:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
+    permissions: write-all
     steps:
       - uses: actions/checkout@v2
         with:
+          token: ${{ secrets.PAT_TOKEN }}
           fetch-depth: 0
       
-      - name: Create Pull Request
+      - name: Configure Git
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          
+      - name: Create PR
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.PAT_TOKEN }}
-          commit-message: Auto merge main to production
-          title: Auto merge main to production
-          body: |
-            Automatic PR to merge main into production
-          branch: auto-merge-main-to-production
+          branch: auto-merge-production
           base: production
-          delete-branch: true
+          title: 'Auto-merge main into production'
+          body: 'Automated PR to merge changes from main into production'
