@@ -19,7 +19,7 @@ jobs:
       - name: Create Pull Request
         uses: peter-evans/create-pull-request@v5
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT_TOKEN }}
           commit-message: Auto merge main to production
           title: Auto merge main to production
           body: |
