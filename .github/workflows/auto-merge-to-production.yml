@@ -1,4 +1,4 @@
-name: Auto Merge Main to Production
+name: Main to Production
 
 on:
   push:
@@ -6,24 +6,30 @@ on:
       - main
 
 jobs:
-  auto-merge:
+  sync-branch:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         with:
           fetch-depth: 0
+          token: ${{ secrets.PAT_TOKEN }}
       
       - name: Create Pull Request
-        uses: peter-evans/create-pull-request@v5
-        with:
-          token: ${{ secrets.PAT_TOKEN }}
-          commit-message: Auto merge main to production
-          title: Auto merge main to production
-          body: |
-            Automatic PR to merge main into production
-          branch: auto-merge-main-to-production
-          base: production
-          delete-branch: true
+        env:
+          GH_TOKEN: ${{ secrets.PAT_TOKEN }}
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          
+          # Create a new branch from main
+          git checkout -b temp-branch
+          
+          # Push the branch
+          git push origin temp-branch
+          
+          # Create PR using GitHub CLI
+          gh pr create \
+            --base Production \
+            --head temp-branch \
+            --title "Sync: Main to Production" \
+            --body "Automated PR to sync Production with main branch"

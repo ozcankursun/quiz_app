@@ -34,6 +34,7 @@ A multi-section quiz application with user authentication.
 ## Mentor
 - Fatih Demir
 - Yavuz Köksal
+  
 ## Contributors
 - A. Özcan Kursun 
 - Durak Okur
