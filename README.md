@@ -36,3 +36,4 @@ A multi-section quiz application with user authentication.
 - Durak Okur
 - Ömer Gökdeniz
 - Fahrettin Aydın
+- Emre Aka
