@@ -23,6 +23,7 @@ share/python-wheels/
 MANIFEST
 
 # Virtual Environment
+quizAppVenv/
 venv/
 env/
 ENV/
