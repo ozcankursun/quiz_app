@@ -1,12 +1,33 @@
-name: Main to Production
-
+name: Auto Merge to Production
 on:
   push:
     branches:
       - main
-
 jobs:
-  sync-branch:
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest
+          
+      - name: Run tests
+        run: |
+          pytest test_main.py -v
+
+  create-pr:
+    name: Create PR to Production
+    needs: test  # Testler başarılı olduktan sonra çalışır
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -32,4 +53,11 @@ jobs:
             --base Production \
             --head temp-branch \
             --title "Sync: Main to Production" \
-            --body "Automated PR to sync Production with main branch"
+            --body "Automated PR to sync Production with main branch.
+            
+            ✅ All tests passed successfully."
+
+      - name: Cleanup temp branch
+        if: always()  # Her durumda çalışır
+        run: |
+          git push origin --delete temp-branch || true  # Hata olsa bile devam et
