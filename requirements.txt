@@ -1,7 +1,6 @@
 # To install the libraries listed below, run:
 # pip install -r requirements.txt
 
-
 pytest==8.3.3
 bcrypt==3.2.2
 
