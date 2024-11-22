@@ -37,7 +37,7 @@ A multi-section quiz application with user authentication.
 ## Coordinator 
 - Yavuz Köksal
   
-## Contributors
+## Contributors (Team 3)
 - A. Özcan Kursun 
 - Durak Okur
 - Ömer Gökdeniz
