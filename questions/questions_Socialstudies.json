@@ -1,0 +1,285 @@
+{
+                  "questions": [
+                      {
+                          "id": 1,
+                          "text": "What is the capital of the Netherlands?",
+                          "options": [
+                              "Rotterdam",
+                              "Amsterdam",
+                              "The Hague",
+                              "Utrecht"
+                          ],
+                          "correct_answers": [
+                              "2"
+                          ],
+                          "points": 5,
+                          "type": "single_choice"
+                      },
+                      {
+                          "id": 2,
+                          "text": "Which of the following is a famous Dutch painter?",
+                          "options": [
+                              "Pablo Picasso",
+                              "Vincent van Gogh",
+                              "Leonardo da Vinci",
+                              "Claude Monet"
+                          ],
+                          "correct_answers": [
+                              "2"
+                          ],
+                          "points": 5,
+                          "type": "single_choice"
+                      },
+                      {
+                          "id": 3,
+                          "text": "When is King's Day celebrated in the Netherlands?",
+                          "options": [
+                              "April 27",
+                              "July 4",
+                              "January 1",
+                              "December 25"
+                          ],
+                          "correct_answers": [
+                              "1"
+                          ],
+                          "points": 5,
+                          "type": "single_choice"
+                      },
+                      {
+                          "id": 4,
+                          "text": "What color is associated with the Dutch Royal Family?",
+                          "options": [
+                              "Red",
+                              "Blue",
+                              "Orange",
+                              "Green"
+                          ],
+                          "correct_answers": [
+                              "3"
+                          ],
+                          "points": 5,
+                          "type": "single_choice"
+                      },
+                      {
+                          "id": 5,
+                          "text": "Which flower is a symbol of the Netherlands?",
+                          "options": [
+                              "Rose",
+                              "Tulp",
+                              "Daffodil",
+                              "Lily"
+                          ],
+                          "correct_answers": [
+                              "2"
+                          ],
+                          "points": 5,
+                          "type": "single_choice"
+                      },
+                      {
+                          "id": 6,
+                          "text": "Which two cities are located in the Netherlands?",
+                          "options": [
+                              "Paris",
+                              "Rotterdam",
+                              "Brussels",
+                              "Eindhoven",
+                              "Berlin"
+                          ],
+                          "correct_answers": [
+                              "2",
+                              "4"
+                          ],
+                          "points": 7,
+                          "type": "multiple_choice"
+                      },
+                      {
+                          "id": 7,
+                          "text": "Which two are Dutch provinces?",
+                          "options": [
+                              "Flanders",
+                              "North Holland",
+                              "Brabant",
+                              "Normandy",
+                              "Friesland"
+                          ],
+                          "correct_answers": [
+                              "2",
+                              "5"
+                          ],
+                          "points": 7,
+                          "type": "multiple_choice"
+                      },
+                      {
+                          "id": 8,
+                          "text": "Which two are Dutch rivers?",
+                          "options": [
+                              "Meuse",
+                              "Rhine",
+                              "Danube",
+                              "Seine",
+                              "Thames"
+                          ],
+                          "correct_answers": [
+                              "1",
+                              "2"
+                          ],
+                          "points": 7,
+                          "type": "multiple_choice"
+                      },
+                      {
+                          "id": 9,
+                          "text": "Which two foods are traditional in the Netherlands?",
+                          "options": [
+                              "Stroopwafels",
+                              "Sushi",
+                              "Herring",
+                              "Pizza",
+                              "Croissant"
+                          ],
+                          "correct_answers": [
+                              "1",
+                              "3"
+                          ],
+                          "points": 7,
+                          "type": "multiple_choice"
+                      },
+                      {
+                          "id": 10,
+                          "text": "Which two countries share a border with the Netherlands?",
+                          "options": [
+                              "Belgium",
+                              "France",
+                              "Germany",
+                              "Denmark",
+                              "Poland"
+                          ],
+                          "correct_answers": [
+                              "1",
+                              "3"
+                          ],
+                          "points": 7,
+                          "type": "multiple_choice"
+                      },
+                      {
+                          "id": 11,
+                          "text": "True or False: Amsterdam is the largest city in the Netherlands.",
+                          "correct_answers": [
+                              "true"
+                          ],
+                          "points": 3,
+                          "type": "true_false"
+                      },
+                      {
+                          "id": 12,
+                          "text": "True or False: The Netherlands is known as the land of windmills.",
+                          "correct_answers": [
+                              "true"
+                          ],
+                          "points": 3,
+                          "type": "true_false"
+                      },
+                      {
+                          "id": 13,
+                          "text": "True or False: Dutch is the official language of the Netherlands.",
+                          "correct_answers": [
+                              "true"
+                          ],
+                          "points": 3,
+                          "type": "true_false"
+                      },
+                      {
+                          "id": 14,
+                          "text": "True or False: The Netherlands is entirely below sea level.",
+                          "correct_answers": [
+                              "false"
+                          ],
+                          "points": 3,
+                          "type": "true_false"
+                      },
+                      {
+                          "id": 15,
+                          "text": "True or False: Tulps are native to the Netherlands.",
+                          "correct_answers": [
+                              "false"
+                          ],
+                          "points": 3,
+                          "type": "true_false"
+                      },
+                      {
+                          "id": 16,
+                          "text": "Order these cities by population size (largest to smallest): Amsterdam, Rotterdam, Utrecht",
+                          "options": [
+                              "Amsterdam, Rotterdam,  Utrecht",
+                              "Rotterdam, Amsterdam,  Utrecht",
+                              " Amsterdam, Rotterdam, Utrecht",
+                              "Amsterdam,  Rotterdam, Utrecht"
+                          ],
+                          "correct_answers": [
+                              "1"
+                          ],
+                          "points": 6,
+                          "type": "ordering"
+                      },
+                      {
+                          "id": 17,
+                          "text": "Arrange these famous Dutch painters by birth year: Rembrandt, Van Gogh, Vermeer",
+                          "options": [
+                              "Rembrandt, Vermeer, Van Gogh",
+                              "Van Gogh, Vermeer, Rembrandt",
+                              "Vermeer, Rembrandt, Van Gogh",
+                              "Rembrandt, Van Gogh, Vermeer"
+                          ],
+                          "correct_answers": [
+                              "1"
+                          ],
+                          "points": 6,
+                          "type": "ordering"
+                      },
+                      {
+                          "id": 18,
+                          "text": "Order these Dutch holidays by calendar date: Liberation Day, King's Day, Sinterklaas",
+                          "options": [
+                              "King's Day, Liberation Day, Sinterklaas",
+                              "Sinterklaas, Liberation Day, King's Day",
+                              "Liberation Day, King's Day, Sinterklaas",
+                              "Liberation Day, Sinterklaas, King's Day"
+                          ],
+                          "correct_answers": [
+                              "1"
+                          ],
+                          "points": 6,
+                          "type": "ordering"
+                      },
+                      {
+                          "id": 19,
+                          "text": "Arrange these provinces from north to south: Friesland, Limburg, Zeeland",
+                          "options": [
+                              "Friesland, Zeeland, Limburg",
+                              "Zeeland, Friesland, Limburg",
+                              "Limburg, Friesland, Zeeland",
+                              "Friesland, Limburg, Zeeland"
+                          ],
+                          "correct_answers": [
+                              "1"
+                          ],
+                          "points": 6,
+                          "type": "ordering"
+                      },
+                      {
+                          "id": 20,
+                          "text": "Order these historical events chronologically: Treaty of Utrecht, Dutch independence, Establishment of the EU",
+                          "options": [
+                              "Dutch independence, Treaty of Utrecht, Establishment of the EU",
+                              "Treaty of Utrecht, Dutch independence, Establishment of the EU",
+                              "Establishment of the EU, Treaty of Utrecht, Dutch independence",
+                              "Treaty of Utrecht, Establishment of the EU, Dutch independence"
+                          ],
+                          "correct_answers": [
+                              "1"
+                          ],
+                          "points": 6,
+                          "type": "ordering"
+                      }
+                  ]
+              }
+              
