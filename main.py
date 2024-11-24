@@ -188,6 +188,24 @@ class QuizManager:
         print("Signup successful!")
         return True
 
+    def signin_student(self):
+        print("\nWelcome, Student! You can participate in quizzes or view your results.")
+        while True:
+            print("\n1. View Previous Results")
+            print("2. Start New Quiz")
+            print("3. Logout")
+            choice = input("Choose an option: ").strip()
+
+            if choice == "1":
+                self.view_previous_results()
+            elif choice == "2":
+                self.start_new_quiz()
+            elif choice == "3":
+                print("Logged out successfully.")
+                break
+            else:
+                print("Invalid choice. Please choose again.")
+
     def signin(self) -> bool:
         """Sign in an existing user."""
         name = input("Enter your first name: ").strip()

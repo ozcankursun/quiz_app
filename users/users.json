@@ -49,7 +49,7 @@
         "mehmet_kara": {
             "name": "Mehmet",
             "surname": "Kara",
-            "hashed_password": "$2b$12$MfQKUiy2oTM0C54Qa2aR4uU/oKAgWJ3EazmsjFpjcxGoZm2H8EPSK",
+            "hashed_password": "$2b$12$ehoHrk0I1YQJMqOgUJfWRe6F4DYIua2TNpgqCVJAfZx4xj9KlbhvG",
             "role": "student",
             "class": "7-C",
             "attempt_count": 0,
@@ -63,6 +63,16 @@
             "class": "7-D",
             "attempt_count": 0,
             "last_attempt": ""
+        },
+        "a_a": {
+            "name": "a",
+            "surname": "a",
+            "hashed_password": "$2b$12$d6oWFHQwJ0xBVquKod6BS.GQ.9nq1OSRui1IHRestWDNOcjpeMPTy",
+            "role": "student",
+            "assigned_section": null,
+            "user_class": "5b",
+            "attempt_count": 1,
+            "last_attempt": "2024-11-24T11:09:34.010305"
         }
     }
 }
