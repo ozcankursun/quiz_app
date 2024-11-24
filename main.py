@@ -77,22 +77,47 @@ class QuizManager:
         name = input("Enter your first name: ").strip()
         surname = input("Enter your last name: ").strip()
         password = input("Set your password: ").strip()
+        role = input("Enter role (teacher/student): ").strip().lower()
 
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
         user_data = self.load_user_data()
         user_key = f"{name.lower()}_{surname.lower()}"
 
-        if user_key in user_data:
+        if user_key in user_data["users"]:
             print("User already exists. Please log in.")
             return False
 
-        self.user = User(
-            name=name,
-            surname=surname,
-            hashed_password=hashed_password.decode('utf-8')
-        )
-        self.save_user_data()
-        print("Signup successful! You can now log in.")
+        # Assign additional attributes
+        if role == "teacher":
+            assigned_section = int(input("Enter assigned section (1-4): "))
+            if assigned_section not in range(1, 5):
+                print("Invalid section number.")
+                return False
+            new_user = {
+                "name": name,
+                "surname": surname,
+                "hashed_password": hashed_password.decode('utf-8'),
+                "role": "teacher",
+                "assigned_section": assigned_section
+            }
+        elif role == "student":
+            user_class = input("Enter class (e.g., 7-A): ").strip()
+            new_user = {
+                "name": name,
+                "surname": surname,
+                "hashed_password": hashed_password.decode('utf-8'),
+                "role": "student",
+                "class": user_class,
+                "attempt_count": 0,
+                "last_attempt": ""
+            }
+        else:
+            print("Invalid role.")
+            return False
+
+        user_data["users"][user_key] = new_user
+        self.save_user_data(user_data)
+        print("Signup successful!")
         return True
 
     def signin(self) -> bool:
@@ -104,25 +129,45 @@ class QuizManager:
         user_data = self.load_user_data()
         user_key = f"{name.lower()}_{surname.lower()}"
 
-        if user_key not in user_data:
+        if user_key not in user_data["users"]:
             print("User does not exist. Please sign up.")
             return False
 
-        stored_password = user_data[user_key]["hashed_password"]
-        if not bcrypt.checkpw(password.encode('utf-8'), stored_password.encode('utf-8')):
+        user = user_data["users"][user_key]
+        if not bcrypt.checkpw(password.encode('utf-8'), user["hashed_password"].encode('utf-8')):
             print("Incorrect password. Please try again.")
             return False
 
-        # Kullanıcı bilgilerini yükle, ancak attempt_count kontrolü sınav başlatma sırasında yapılacak
-        self.user = User(
-            name=name,
-            surname=surname,
-            hashed_password=stored_password,
-            attempt_count=user_data[user_key]["attempt_count"],
-            last_attempt=user_data[user_key]["last_attempt"]
-        )
-        print("Login successful!")
+        self.user = user
+        print(f"Login successful! Welcome {self.user['name']}.")
+
+        if self.user["role"] == "teacher":
+            self.signin_teacher()
+        elif self.user["role"] == "student":
+            self.signin_student()
+        else:
+            print("Invalid role.")
+            return False
+
         return True
+
+    def signin_teacher(self):
+        print("\nWelcome, Teacher! You can manage your assigned section.")
+        while True:
+            print("\n1. View Section Statistics")
+            print("2. Add/Update Questions")
+            print("3. Logout")
+            choice = input("Choose an option: ").strip()
+
+            if choice == "1":
+                self.view_section_statistics(self.user["assigned_section"])
+            elif choice == "2":
+                self.add_or_update_question(self.user["assigned_section"])
+            elif choice == "3":
+                print("Logged out successfully.")
+                break
+            else:
+                print("Invalid choice. Please choose again.")
 
     def load_user_data(self) -> Dict:
         """Load user data from a JSON file."""
