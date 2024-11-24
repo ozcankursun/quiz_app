@@ -21,6 +21,9 @@ class User:
     name: str
     surname: str
     hashed_password: str
+    role: str = "student"  # Varsayılan rol
+    assigned_section: Union[int, None] = None
+    user_class: Union[str, None] = None  # Sadece öğrenciler için
     attempt_count: int = 0
     last_attempt: str = ""
 
@@ -83,39 +86,47 @@ class QuizManager:
         user_data = self.load_user_data()
         user_key = f"{name.lower()}_{surname.lower()}"
 
-        if user_key in user_data["users"]:
+        if user_key in user_data.get("users", {}):
             print("User already exists. Please log in.")
             return False
 
-        # Assign additional attributes
         if role == "teacher":
-            assigned_section = int(input("Enter assigned section (1-4): "))
-            if assigned_section not in range(1, 5):
-                print("Invalid section number.")
+            try:
+                assigned_section = int(input("Enter assigned section (1-4): ").strip())
+                if assigned_section not in range(1, 5):
+                    raise ValueError("Invalid section number. Must be between 1 and 4.")
+            except ValueError as e:
+                print(e)
                 return False
-            new_user = {
-                "name": name,
-                "surname": surname,
-                "hashed_password": hashed_password.decode('utf-8'),
-                "role": "teacher",
-                "assigned_section": assigned_section
-            }
+            new_user = User(
+                name=name,
+                surname=surname,
+                hashed_password=hashed_password.decode('utf-8'),
+                role="teacher",
+                assigned_section=assigned_section
+            )
         elif role == "student":
             user_class = input("Enter class (e.g., 7-A): ").strip()
-            new_user = {
-                "name": name,
-                "surname": surname,
-                "hashed_password": hashed_password.decode('utf-8'),
-                "role": "student",
-                "class": user_class,
-                "attempt_count": 0,
-                "last_attempt": ""
-            }
+            new_user = User(
+                name=name,
+                surname=surname,
+                hashed_password=hashed_password.decode('utf-8'),
+                role="student",
+                assigned_section=None,
+                attempt_count=0,
+                last_attempt="",
+                user_class=user_class
+            )
         else:
             print("Invalid role.")
             return False
 
-        user_data["users"][user_key] = new_user
+        if "users" not in user_data:
+            user_data["users"] = {}
+        user_data["users"][user_key] = asdict(new_user)
+
+        self.user = new_user  # `self.user` bir `User` dataclass nesnesi olacak
+
         self.save_user_data(user_data)
         print("Signup successful!")
         return True
@@ -129,21 +140,31 @@ class QuizManager:
         user_data = self.load_user_data()
         user_key = f"{name.lower()}_{surname.lower()}"
 
-        if user_key not in user_data["users"]:
+        if user_key not in user_data.get("users", {}):
             print("User does not exist. Please sign up.")
             return False
 
-        user = user_data["users"][user_key]
-        if not bcrypt.checkpw(password.encode('utf-8'), user["hashed_password"].encode('utf-8')):
+        user_dict = user_data["users"][user_key]
+        if not bcrypt.checkpw(password.encode('utf-8'), user_dict["hashed_password"].encode('utf-8')):
             print("Incorrect password. Please try again.")
             return False
 
-        self.user = user
-        print(f"Login successful! Welcome {self.user['name']}.")
+        # `self.user` değişkenini bir `User` dataclass nesnesine dönüştür
+        self.user = User(
+            name=user_dict["name"],
+            surname=user_dict["surname"],
+            hashed_password=user_dict["hashed_password"],
+            attempt_count=user_dict.get("attempt_count", 0),
+            last_attempt=user_dict.get("last_attempt", ""),
+            role=user_dict.get("role", "student"),
+            assigned_section=user_dict.get("assigned_section"),
+            user_class=user_dict.get("class", None)
+        )
+        print(f"Login successful! Welcome {self.user.name}.")
 
-        if self.user["role"] == "teacher":
+        if self.user.role == "teacher":
             self.signin_teacher()
-        elif self.user["role"] == "student":
+        elif self.user.role == "student":
             self.signin_student()
         else:
             print("Invalid role.")
@@ -177,11 +198,8 @@ class QuizManager:
         except FileNotFoundError:
             return {}
 
-    def save_user_data(self):
+    def save_user_data(self, user_data: Dict):
         """Save user data to a JSON file."""
-        user_data = self.load_user_data()
-        user_key = f"{self.user.name.lower()}_{self.user.surname.lower()}"
-        user_data[user_key] = asdict(self.user)
         os.makedirs("users", exist_ok=True)
         with open("users/users.json", 'w', encoding='utf-8') as f:
             json.dump(user_data, f, indent=4)
