@@ -372,22 +372,30 @@ class QuizManager:
 
     def save_results(self, overall_score=0):
         results_data = {
-            "user": asdict(self.user),
+            "user": {
+                "name": self.user["name"],
+                "surname": self.user["surname"],
+                "role": self.user["role"],
+                "class": self.user.get("class", None)
+            },
             "date": datetime.now().isoformat(),
             "results": self.results,
             "overall_score": overall_score
         }
-        
+
         # Kullanıcının sınav tarihini ve deneme sayısını güncelle
-        self.user.attempt_count += 1
-        self.user.last_attempt = datetime.now().isoformat()
-        self.save_user_data()  # Kullanıcı bilgilerini güncelle
+        user_data = self.load_user_data()
+        user_key = f"{self.user['name'].lower()}_{self.user['surname'].lower()}"
+        if user_key in user_data["users"]:
+            user_data["users"][user_key]["attempt_count"] += 1
+            user_data["users"][user_key]["last_attempt"] = datetime.now().isoformat()
+        
+        self.save_user_data(user_data)  # Kullanıcı bilgilerini kaydet
 
         os.makedirs("results", exist_ok=True)
-        filename = f"results/{self.user.name.lower()}_{self.user.surname.lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        filename = f"results/{self.user['name'].lower()}_{self.user['surname'].lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(results_data, f, indent=4)
-
 
 
 if __name__ == "__main__":
