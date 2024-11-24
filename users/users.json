@@ -73,6 +73,16 @@
             "user_class": "4b",
             "attempt_count": 0,
             "last_attempt": ""
+        },
+        "w_w": {
+            "name": "w",
+            "surname": "w",
+            "hashed_password": "$2b$12$6U5crzHQ2o4sHbQYjj2vbOdYkmaBxT3bqegWC6il8mY6c595iYrei",
+            "role": "student",
+            "assigned_section": null,
+            "user_class": "4b",
+            "attempt_count": 0,
+            "last_attempt": ""
         }
     }
 }
