@@ -206,6 +206,24 @@ class QuizManager:
             else:
                 print("Invalid choice. Please choose again.")
 
+    def signin_teacher(self):
+        print("\nWelcome, Teacher! You can manage your assigned section.")
+        while True:
+            print("\n1. View Section Statistics")
+            print("2. Add/Update Questions")
+            print("3. Logout")
+            choice = input("Choose an option: ").strip()
+
+            if choice == "1":
+                self.view_section_statistics(self.user.assigned_section)
+            elif choice == "2":
+                self.add_or_update_question(self.user.assigned_section)
+            elif choice == "3":
+                print("Logged out successfully.")
+                break
+            else:
+                print("Invalid choice. Please choose again.")
+
     def signin(self) -> bool:
         """Sign in an existing user."""
         name = input("Enter your first name: ").strip()
@@ -246,6 +264,36 @@ class QuizManager:
             return False
 
         return True
+    
+    def view_section_statistics(self, section_number: int):
+        """Display statistics for the given section."""
+        results_path = "results"
+        total_students = 0
+        total_score = 0
+        passed_count = 0
+
+        if os.path.exists(results_path):
+            for file_name in os.listdir(results_path):
+                with open(os.path.join(results_path, file_name), 'r', encoding='utf-8') as f:
+                    result_data = json.load(f)
+                    if f"Section {section_number}" in result_data["results"]:
+                        total_students += 1
+                        score = result_data["results"][f"Section {section_number}"]
+                        total_score += score
+                        if score >= 75:
+                            passed_count += 1
+
+        if total_students == 0:
+            print(f"No data available for Section {section_number}.")
+            return
+
+        average_score = total_score / total_students
+        pass_rate = (passed_count / total_students) * 100
+
+        print(f"\nSection {section_number} Statistics:")
+        print(f"Total Students: {total_students}")
+        print(f"Average Score: {average_score:.2f}%")
+        print(f"Pass Rate: {pass_rate:.2f}%")
 
     def load_user_data(self) -> Dict:
         """Load user data from a JSON file."""
