@@ -64,6 +64,21 @@
             ],
             "points": 20,
             "type": "true_false"
+        },
+        {
+            "id": 6,
+            "text": "what is python",
+            "options": [
+                "A programming language",
+                " A snake",
+                " A car",
+                " A fruit"
+            ],
+            "correct_answers": [
+                "1"
+            ],
+            "points": 10,
+            "type": "single_choice"
         }
     ]
 }

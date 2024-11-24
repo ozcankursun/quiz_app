@@ -75,6 +75,63 @@ class QuizManager:
         self.start_time = None
         self.results = {}
 
+    def add_or_update_question(self, section_number: int):
+        """Bölüm için soru ekle veya güncelle."""
+        section = self.sections[section_number - 1]
+        print("\n1. Add New Question")
+        print("\n2. Update Existing Question")
+        choice = input("Choose an option (1 or 2): ").strip()
+
+        if choice == "1":
+            # Yeni bir soru ekleme
+            question_text = input("Enter the question text: ").strip()
+            options = input("Enter the options (comma-separated): ").strip().split(",")
+            correct_answers = input("Enter the correct answers (comma-separated): ").strip().split(",")
+            points = int(input("Enter the points for the question: ").strip())
+            question_type = input("Enter the question type (true_false, single_choice, multiple_choice): ").strip()
+
+            new_question = Question(
+                id=len(section.questions) + 1,
+                text=question_text,
+                options=options,
+                correct_answers=correct_answers,
+                points=points,
+                type=question_type
+            )
+            section.questions.append(new_question)
+            print("Question added successfully!")
+        elif choice == "2":
+            # Mevcut bir soruyu güncelleme
+            for q in section.questions:
+                print(f"{q.id}. {q.text}")
+            question_id = int(input("Enter the question ID to update: ").strip())
+            question = next((q for q in section.questions if q.id == question_id), None)
+            if not question:
+                print("Invalid question ID.")
+                return
+
+            question.text = input(f"Enter the new text (current: {question.text}): ").strip() or question.text
+            question.options = input(f"Enter the new options (current: {','.join(question.options)}): ").strip().split(",") or question.options
+            question.correct_answers = input(f"Enter the new correct answers (current: {','.join(question.correct_answers)}): ").strip().split(",") or question.correct_answers
+            question.points = int(input(f"Enter the new points (current: {question.points}): ").strip() or question.points)
+            print("Question updated successfully!")
+
+        # Değişiklikleri kaydet
+        self.save_questions(section_number)
+
+    def save_questions(self, section_number: int):
+        """Soruları JSON dosyasına kaydet."""
+        section = self.sections[section_number - 1]
+        file_path = f"questions/questions_section{section_number}.json"
+
+        questions_data = {
+            "questions": [asdict(q) for q in section.questions]
+        }
+
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(questions_data, f, indent=4)
+        print(f"Section {section_number} questions saved successfully!")
+
     def signup(self) -> bool:
         """Sign up a new user."""
         name = input("Enter your first name: ").strip()
@@ -171,24 +228,6 @@ class QuizManager:
             return False
 
         return True
-
-    def signin_teacher(self):
-        print("\nWelcome, Teacher! You can manage your assigned section.")
-        while True:
-            print("\n1. View Section Statistics")
-            print("2. Add/Update Questions")
-            print("3. Logout")
-            choice = input("Choose an option: ").strip()
-
-            if choice == "1":
-                self.view_section_statistics(self.user["assigned_section"])
-            elif choice == "2":
-                self.add_or_update_question(self.user["assigned_section"])
-            elif choice == "3":
-                print("Logged out successfully.")
-                break
-            else:
-                print("Invalid choice. Please choose again.")
 
     def load_user_data(self) -> Dict:
         """Load user data from a JSON file."""
@@ -372,12 +411,7 @@ class QuizManager:
 
     def save_results(self, overall_score=0):
         results_data = {
-            "user": {
-                "name": self.user["name"],
-                "surname": self.user["surname"],
-                "role": self.user["role"],
-                "class": self.user.get("class", None)
-            },
+            "user": asdict(self.user),  # User nesnesini dict'e dönüştür
             "date": datetime.now().isoformat(),
             "results": self.results,
             "overall_score": overall_score
@@ -385,17 +419,18 @@ class QuizManager:
 
         # Kullanıcının sınav tarihini ve deneme sayısını güncelle
         user_data = self.load_user_data()
-        user_key = f"{self.user['name'].lower()}_{self.user['surname'].lower()}"
-        if user_key in user_data["users"]:
+        user_key = f"{self.user.name.lower()}_{self.user.surname.lower()}"
+        if user_key in user_data.get("users", {}):
             user_data["users"][user_key]["attempt_count"] += 1
             user_data["users"][user_key]["last_attempt"] = datetime.now().isoformat()
         
         self.save_user_data(user_data)  # Kullanıcı bilgilerini kaydet
 
         os.makedirs("results", exist_ok=True)
-        filename = f"results/{self.user['name'].lower()}_{self.user['surname'].lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        filename = f"results/{self.user.name.lower()}_{self.user.surname.lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(results_data, f, indent=4)
+
 
 
 if __name__ == "__main__":
