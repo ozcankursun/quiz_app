@@ -7,6 +7,13 @@ import os
 from dataclasses import dataclass, asdict
 import bcrypt
 
+# Retrieve values from environment variables
+TIME_LIMIT = int(os.getenv("TIME_LIMIT"))
+ATTEMPT_LIMIT = int(os.getenv("ATTEMPT_LIMIT"))
+MAX_QUESTIONS_PER_SECTION = int(os.getenv("MAX_QUESTIONS_PER_SECTION"))
+ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY")
+
+
 @dataclass
 class Question:
     id: int
@@ -34,6 +41,7 @@ class QuizSection:
         self.current_questions = []
         self.user_answers = {}  # Stores {question_id: answer}
         self.score = 0
+        self.max_questions_per_section = MAX_QUESTIONS_PER_SECTION  # Determined in .env file
 
     def load_questions(self) -> List[Question]:
         """Load questions from the corresponding JSON file."""
@@ -42,9 +50,9 @@ class QuizSection:
             questions_data = json.load(f)
             return [Question(**q) for q in questions_data["questions"]]
 
-    def select_random_questions(self, count: int = 5):
+    def select_random_questions(self):
         """Randomly select questions for the section."""
-        self.current_questions = random.sample(self.questions, count)
+        self.current_questions = random.sample(self.questions, self.max_questions_per_section)
 
     def calculate_score(self) -> float:
         total_points = sum(q.points for q in self.current_questions)
@@ -71,7 +79,11 @@ class QuizManager:
     def __init__(self):
         self.sections = [QuizSection(i) for i in range(1, 5)]
         self.user = None
-        self.time_limit = 600  # Default 10 minutes
+
+        # Determined in .env file
+        self.time_limit = TIME_LIMIT
+        self.attempt_limit = ATTEMPT_LIMIT
+
         self.start_time = None
         self.results = {}
 
@@ -188,6 +200,42 @@ class QuizManager:
         print("Signup successful!")
         return True
 
+    def signin_student(self):
+        print("\nWelcome, Student! You can participate in quizzes or view your results.")
+        while True:
+            print("\n1. View Previous Results")
+            print("2. Start New Quiz")
+            print("3. Logout")
+            choice = input("Choose an option: ").strip()
+
+            if choice == "1":
+                self.view_previous_results()
+            elif choice == "2":
+                self.start_new_quiz()
+            elif choice == "3":
+                print("Logged out successfully.")
+                break
+            else:
+                print("Invalid choice. Please choose again.")
+
+    def signin_teacher(self):
+        print("\nWelcome, Teacher! You can manage your assigned section.")
+        while True:
+            print("\n1. View Section Statistics")
+            print("2. Add/Update Questions")
+            print("3. Logout")
+            choice = input("Choose an option: ").strip()
+
+            if choice == "1":
+                self.view_section_statistics(self.user.assigned_section)
+            elif choice == "2":
+                self.add_or_update_question(self.user.assigned_section)
+            elif choice == "3":
+                print("Logged out successfully.")
+                break
+            else:
+                print("Invalid choice. Please choose again.")
+
     def signin(self) -> bool:
         """Sign in an existing user."""
         name = input("Enter your first name: ").strip()
@@ -228,6 +276,36 @@ class QuizManager:
             return False
 
         return True
+    
+    def view_section_statistics(self, section_number: int):
+        """Display statistics for the given section."""
+        results_path = "results"
+        total_students = 0
+        total_score = 0
+        passed_count = 0
+
+        if os.path.exists(results_path):
+            for file_name in os.listdir(results_path):
+                with open(os.path.join(results_path, file_name), 'r', encoding='utf-8') as f:
+                    result_data = json.load(f)
+                    if f"Section {section_number}" in result_data["results"]:
+                        total_students += 1
+                        score = result_data["results"][f"Section {section_number}"]
+                        total_score += score
+                        if score >= 75:
+                            passed_count += 1
+
+        if total_students == 0:
+            print(f"No data available for Section {section_number}.")
+            return
+
+        average_score = total_score / total_students
+        pass_rate = (passed_count / total_students) * 100
+
+        print(f"\nSection {section_number} Statistics:")
+        print(f"Total Students: {total_students}")
+        print(f"Average Score: {average_score:.2f}%")
+        print(f"Pass Rate: {pass_rate:.2f}%")
 
     def load_user_data(self) -> Dict:
         """Load user data from a JSON file."""
@@ -353,7 +431,7 @@ class QuizManager:
     def start_new_quiz(self):
         """Start a new quiz for the logged-in user."""
         # Kullanıcı sınav hakkını kontrol et
-        if self.user.attempt_count >= 2:
+        if self.user.attempt_count >= self.attempt_limit: # ATTEMPT_LIMIT is determined in .env file
             print("\nYou have exceeded the maximum number of attempts. You cannot start a new quiz.")
             return
 
