@@ -46,15 +46,6 @@
             "attempt_count": 0,
             "last_attempt": ""
         },
-        "mehmet_kara": {
-            "name": "Mehmet",
-            "surname": "Kara",
-            "hashed_password": "$2b$12$ehoHrk0I1YQJMqOgUJfWRe6F4DYIua2TNpgqCVJAfZx4xj9KlbhvG",
-            "role": "student",
-            "class": "7-C",
-            "attempt_count": 1,
-            "last_attempt": "2024-11-24T11:15:49.776682"
-        },
         "elif_yildiz": {
             "name": "Elif",
             "surname": "Yildiz",

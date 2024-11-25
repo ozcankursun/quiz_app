@@ -7,6 +7,13 @@ import os
 from dataclasses import dataclass, asdict
 import bcrypt
 
+# Retrieve values from environment variables
+TIME_LIMIT = int(os.getenv("TIME_LIMIT"))
+ATTEMPT_LIMIT = int(os.getenv("ATTEMPT_LIMIT"))
+MAX_QUESTIONS_PER_SECTION = int(os.getenv("MAX_QUESTIONS_PER_SECTION"))
+ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY")
+
+
 @dataclass
 class Question:
     id: int
@@ -34,6 +41,7 @@ class QuizSection:
         self.current_questions = []
         self.user_answers = {}  # Stores {question_id: answer}
         self.score = 0
+        self.max_questions_per_section = MAX_QUESTIONS_PER_SECTION  # Determined in .env file
 
     def load_questions(self) -> List[Question]:
         """Load questions from the corresponding JSON file."""
@@ -42,9 +50,9 @@ class QuizSection:
             questions_data = json.load(f)
             return [Question(**q) for q in questions_data["questions"]]
 
-    def select_random_questions(self, count: int = 5):
+    def select_random_questions(self):
         """Randomly select questions for the section."""
-        self.current_questions = random.sample(self.questions, count)
+        self.current_questions = random.sample(self.questions, self.max_questions_per_section)
 
     def calculate_score(self) -> float:
         total_points = sum(q.points for q in self.current_questions)
@@ -71,7 +79,11 @@ class QuizManager:
     def __init__(self):
         self.sections = [QuizSection(i) for i in range(1, 5)]
         self.user = None
-        self.time_limit = 600  # Default 10 minutes
+
+        # Determined in .env file
+        self.time_limit = TIME_LIMIT
+        self.attempt_limit = ATTEMPT_LIMIT
+
         self.start_time = None
         self.results = {}
 
@@ -419,7 +431,7 @@ class QuizManager:
     def start_new_quiz(self):
         """Start a new quiz for the logged-in user."""
         # Kullanıcı sınav hakkını kontrol et
-        if self.user.attempt_count >= 2:
+        if self.user.attempt_count >= self.attempt_limit: # ATTEMPT_LIMIT is determined in .env file
             print("\nYou have exceeded the maximum number of attempts. You cannot start a new quiz.")
             return
 
