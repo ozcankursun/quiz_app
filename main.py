@@ -7,11 +7,6 @@ import os
 from dataclasses import dataclass, asdict
 import bcrypt
 
-from dotenv import load_dotenv
-
-# Load environment variables from .env file
-load_dotenv()
-
 # Retrieve values from environment variables
 TIME_LIMIT = int(os.getenv("TIME_LIMIT"))
 ATTEMPT_LIMIT = int(os.getenv("ATTEMPT_LIMIT"))
