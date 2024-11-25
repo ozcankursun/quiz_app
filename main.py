@@ -21,6 +21,9 @@ class User:
     name: str
     surname: str
     hashed_password: str
+    role: str = "student"  # Varsayılan rol
+    assigned_section: Union[int, None] = None
+    user_class: Union[str, None] = None  # Sadece öğrenciler için
     attempt_count: int = 0
     last_attempt: str = ""
 
@@ -72,28 +75,154 @@ class QuizManager:
         self.start_time = None
         self.results = {}
 
+    def add_or_update_question(self, section_number: int):
+        """Bölüm için soru ekle veya güncelle."""
+        section = self.sections[section_number - 1]
+        print("\n1. Add New Question")
+        print("\n2. Update Existing Question")
+        choice = input("Choose an option (1 or 2): ").strip()
+
+        if choice == "1":
+            # Yeni bir soru ekleme
+            question_text = input("Enter the question text: ").strip()
+            options = input("Enter the options (comma-separated): ").strip().split(",")
+            correct_answers = input("Enter the correct answers (comma-separated): ").strip().split(",")
+            points = int(input("Enter the points for the question: ").strip())
+            question_type = input("Enter the question type (true_false, single_choice, multiple_choice): ").strip()
+
+            new_question = Question(
+                id=len(section.questions) + 1,
+                text=question_text,
+                options=options,
+                correct_answers=correct_answers,
+                points=points,
+                type=question_type
+            )
+            section.questions.append(new_question)
+            print("Question added successfully!")
+        elif choice == "2":
+            # Mevcut bir soruyu güncelleme
+            for q in section.questions:
+                print(f"{q.id}. {q.text}")
+            question_id = int(input("Enter the question ID to update: ").strip())
+            question = next((q for q in section.questions if q.id == question_id), None)
+            if not question:
+                print("Invalid question ID.")
+                return
+
+            question.text = input(f"Enter the new text (current: {question.text}): ").strip() or question.text
+            question.options = input(f"Enter the new options (current: {','.join(question.options)}): ").strip().split(",") or question.options
+            question.correct_answers = input(f"Enter the new correct answers (current: {','.join(question.correct_answers)}): ").strip().split(",") or question.correct_answers
+            question.points = int(input(f"Enter the new points (current: {question.points}): ").strip() or question.points)
+            print("Question updated successfully!")
+
+        # Değişiklikleri kaydet
+        self.save_questions(section_number)
+
+    def save_questions(self, section_number: int):
+        """Soruları JSON dosyasına kaydet."""
+        section = self.sections[section_number - 1]
+        file_path = f"questions/questions_section{section_number}.json"
+
+        questions_data = {
+            "questions": [asdict(q) for q in section.questions]
+        }
+
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(questions_data, f, indent=4)
+        print(f"Section {section_number} questions saved successfully!")
+
     def signup(self) -> bool:
         """Sign up a new user."""
         name = input("Enter your first name: ").strip()
         surname = input("Enter your last name: ").strip()
         password = input("Set your password: ").strip()
+        role = input("Enter role (teacher/student): ").strip().lower()
 
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
         user_data = self.load_user_data()
         user_key = f"{name.lower()}_{surname.lower()}"
 
-        if user_key in user_data:
+        if user_key in user_data.get("users", {}):
             print("User already exists. Please log in.")
             return False
 
-        self.user = User(
-            name=name,
-            surname=surname,
-            hashed_password=hashed_password.decode('utf-8')
-        )
-        self.save_user_data()
-        print("Signup successful! You can now log in.")
+        if role == "teacher":
+            try:
+                assigned_section = int(input("Enter assigned section (1-4): ").strip())
+                if assigned_section not in range(1, 5):
+                    raise ValueError("Invalid section number. Must be between 1 and 4.")
+            except ValueError as e:
+                print(e)
+                return False
+            new_user = User(
+                name=name,
+                surname=surname,
+                hashed_password=hashed_password.decode('utf-8'),
+                role="teacher",
+                assigned_section=assigned_section
+            )
+        elif role == "student":
+            user_class = input("Enter class (e.g., 7-A): ").strip()
+            new_user = User(
+                name=name,
+                surname=surname,
+                hashed_password=hashed_password.decode('utf-8'),
+                role="student",
+                assigned_section=None,
+                attempt_count=0,
+                last_attempt="",
+                user_class=user_class
+            )
+        else:
+            print("Invalid role.")
+            return False
+
+        if "users" not in user_data:
+            user_data["users"] = {}
+        user_data["users"][user_key] = asdict(new_user)
+
+        self.user = new_user  # `self.user` bir `User` dataclass nesnesi olacak
+
+        self.save_user_data(user_data)
+        print("Signup successful!")
         return True
+
+    def signin_student(self):
+        print("\nWelcome, Student! You can participate in quizzes or view your results.")
+        while True:
+            print("\n1. View Previous Results")
+            print("2. Start New Quiz")
+            print("3. Logout")
+            choice = input("Choose an option: ").strip()
+
+            if choice == "1":
+                self.view_previous_results()
+            elif choice == "2":
+                self.start_new_quiz()
+            elif choice == "3":
+                print("Logged out successfully.")
+                break
+            else:
+                print("Invalid choice. Please choose again.")
+
+    def signin_teacher(self):
+        print("\nWelcome, Teacher! You can manage your assigned section.")
+        while True:
+            print("\n1. View Section Statistics")
+            print("2. Add/Update Questions")
+            print("3. Logout")
+            choice = input("Choose an option: ").strip()
+
+            if choice == "1":
+                self.view_section_statistics(self.user.assigned_section)
+            elif choice == "2":
+                self.add_or_update_question(self.user.assigned_section)
+            elif choice == "3":
+                print("Logged out successfully.")
+                break
+            else:
+                print("Invalid choice. Please choose again.")
 
     def signin(self) -> bool:
         """Sign in an existing user."""
@@ -104,25 +233,67 @@ class QuizManager:
         user_data = self.load_user_data()
         user_key = f"{name.lower()}_{surname.lower()}"
 
-        if user_key not in user_data:
+        if user_key not in user_data.get("users", {}):
             print("User does not exist. Please sign up.")
             return False
 
-        stored_password = user_data[user_key]["hashed_password"]
-        if not bcrypt.checkpw(password.encode('utf-8'), stored_password.encode('utf-8')):
+        user_dict = user_data["users"][user_key]
+        if not bcrypt.checkpw(password.encode('utf-8'), user_dict["hashed_password"].encode('utf-8')):
             print("Incorrect password. Please try again.")
             return False
 
-        # Kullanıcı bilgilerini yükle, ancak attempt_count kontrolü sınav başlatma sırasında yapılacak
+        # `self.user` değişkenini bir `User` dataclass nesnesine dönüştür
         self.user = User(
-            name=name,
-            surname=surname,
-            hashed_password=stored_password,
-            attempt_count=user_data[user_key]["attempt_count"],
-            last_attempt=user_data[user_key]["last_attempt"]
+            name=user_dict["name"],
+            surname=user_dict["surname"],
+            hashed_password=user_dict["hashed_password"],
+            attempt_count=user_dict.get("attempt_count", 0),
+            last_attempt=user_dict.get("last_attempt", ""),
+            role=user_dict.get("role", "student"),
+            assigned_section=user_dict.get("assigned_section"),
+            user_class=user_dict.get("class", None)
         )
-        print("Login successful!")
+        print(f"Login successful! Welcome {self.user.name}.")
+
+        if self.user.role == "teacher":
+            self.signin_teacher()
+        elif self.user.role == "student":
+            self.signin_student()
+        else:
+            print("Invalid role.")
+            return False
+
         return True
+    
+    def view_section_statistics(self, section_number: int):
+        """Display statistics for the given section."""
+        results_path = "results"
+        total_students = 0
+        total_score = 0
+        passed_count = 0
+
+        if os.path.exists(results_path):
+            for file_name in os.listdir(results_path):
+                with open(os.path.join(results_path, file_name), 'r', encoding='utf-8') as f:
+                    result_data = json.load(f)
+                    if f"Section {section_number}" in result_data["results"]:
+                        total_students += 1
+                        score = result_data["results"][f"Section {section_number}"]
+                        total_score += score
+                        if score >= 75:
+                            passed_count += 1
+
+        if total_students == 0:
+            print(f"No data available for Section {section_number}.")
+            return
+
+        average_score = total_score / total_students
+        pass_rate = (passed_count / total_students) * 100
+
+        print(f"\nSection {section_number} Statistics:")
+        print(f"Total Students: {total_students}")
+        print(f"Average Score: {average_score:.2f}%")
+        print(f"Pass Rate: {pass_rate:.2f}%")
 
     def load_user_data(self) -> Dict:
         """Load user data from a JSON file."""
@@ -132,11 +303,8 @@ class QuizManager:
         except FileNotFoundError:
             return {}
 
-    def save_user_data(self):
+    def save_user_data(self, user_data: Dict):
         """Save user data to a JSON file."""
-        user_data = self.load_user_data()
-        user_key = f"{self.user.name.lower()}_{self.user.surname.lower()}"
-        user_data[user_key] = asdict(self.user)
         os.makedirs("users", exist_ok=True)
         with open("users/users.json", 'w', encoding='utf-8') as f:
             json.dump(user_data, f, indent=4)
@@ -309,16 +477,20 @@ class QuizManager:
 
     def save_results(self, overall_score=0):
         results_data = {
-            "user": asdict(self.user),
+            "user": asdict(self.user),  # User nesnesini dict'e dönüştür
             "date": datetime.now().isoformat(),
             "results": self.results,
             "overall_score": overall_score
         }
-        
+
         # Kullanıcının sınav tarihini ve deneme sayısını güncelle
-        self.user.attempt_count += 1
-        self.user.last_attempt = datetime.now().isoformat()
-        self.save_user_data()  # Kullanıcı bilgilerini güncelle
+        user_data = self.load_user_data()
+        user_key = f"{self.user.name.lower()}_{self.user.surname.lower()}"
+        if user_key in user_data.get("users", {}):
+            user_data["users"][user_key]["attempt_count"] += 1
+            user_data["users"][user_key]["last_attempt"] = datetime.now().isoformat()
+        
+        self.save_user_data(user_data)  # Kullanıcı bilgilerini kaydet
 
         os.makedirs("results", exist_ok=True)
         filename = f"results/{self.user.name.lower()}_{self.user.surname.lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
