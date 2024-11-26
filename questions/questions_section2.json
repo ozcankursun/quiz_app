@@ -9,9 +9,6 @@
                 "Character",
                 "String"
             ],
-            "correct_answers": [
-                "3"
-            ],
             "points": 20,
             "type": "single_choice"
         },
@@ -23,9 +20,6 @@
                 "<class 'tuple'>",
                 "<class 'set'>",
                 "<class 'dict'>"
-            ],
-            "correct_answers": [
-                "1"
             ],
             "points": 20,
             "type": "single_choice"
@@ -39,9 +33,6 @@
                 "extend()",
                 "add()"
             ],
-            "correct_answers": [
-                "2"
-            ],
             "points": 20,
             "type": "single_choice"
         },
@@ -54,9 +45,6 @@
                 ".pt",
                 ".pyt"
             ],
-            "correct_answers": [
-                "1"
-            ],
             "points": 20,
             "type": "single_choice"
         },
@@ -68,9 +56,6 @@
                 "try-catch",
                 "try-finally",
                 "try-handle"
-            ],
-            "correct_answers": [
-                "1"
             ],
             "points": 20,
             "type": "single_choice"

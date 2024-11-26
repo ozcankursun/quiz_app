@@ -6,20 +6,34 @@ from typing import Dict, List, Union
 import os
 from dataclasses import dataclass, asdict
 import bcrypt
+from tabulate import tabulate
 
 # Retrieve values from environment variables
-TIME_LIMIT = int(os.getenv("TIME_LIMIT"))
-ATTEMPT_LIMIT = int(os.getenv("ATTEMPT_LIMIT"))
-MAX_QUESTIONS_PER_SECTION = int(os.getenv("MAX_QUESTIONS_PER_SECTION"))
+TIME_LIMIT = int(os.getenv("TIME_LIMIT", 300))  # Default to 300 seconds if not set
+ATTEMPT_LIMIT = int(os.getenv("ATTEMPT_LIMIT", 3))  # Default to 3 attempts if not set
+MAX_QUESTIONS_PER_SECTION = int(os.getenv("MAX_QUESTIONS_PER_SECTION", 5))  # Default to 5 questions
 ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY")
 
+# Helper functions
+def load_answer_keys() -> Dict:
+    """Load answer keys from answers.json."""
+    file_path = "answers/answers.json"
+    if os.path.exists(file_path):
+        with open(file_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return {"answers": {}}
+
+def save_answer_keys(answer_keys: Dict):
+    """Save answer keys to answers.json."""
+    os.makedirs("answers", exist_ok=True)
+    with open("answers/answers.json", 'w', encoding='utf-8') as f:
+        json.dump(answer_keys, f, indent=4, ensure_ascii=False)
 
 @dataclass
 class Question:
     id: int
     text: str
     options: List[str]
-    correct_answers: List[Union[str, int]]
     points: int
     type: str
 
@@ -28,9 +42,9 @@ class User:
     name: str
     surname: str
     hashed_password: str
-    role: str = "student"  # Varsayılan rol
+    role: str = "student"
     assigned_section: Union[int, None] = None
-    user_class: Union[str, None] = None  # Sadece öğrenciler için
+    user_class: Union[str, None] = None
     attempt_count: int = 0
     last_attempt: str = ""
 
@@ -41,108 +55,56 @@ class QuizSection:
         self.current_questions = []
         self.user_answers = {}  # Stores {question_id: answer}
         self.score = 0
-        self.max_questions_per_section = MAX_QUESTIONS_PER_SECTION  # Determined in .env file
-
+        self.max_questions_per_section = MAX_QUESTIONS_PER_SECTION
+    
     def load_questions(self) -> List[Question]:
-        """Load questions from the corresponding JSON file."""
+        """Load questions from JSON."""
         file_path = f"questions/questions_section{self.section_number}.json"
         with open(file_path, 'r', encoding='utf-8') as f:
-            questions_data = json.load(f)
-            return [Question(**q) for q in questions_data["questions"]]
+            questions_data = json.load(f)["questions"]
+        return [Question(**question_data) for question_data in questions_data]
 
     def select_random_questions(self):
         """Randomly select questions for the section."""
         self.current_questions = random.sample(self.questions, self.max_questions_per_section)
 
     def calculate_score(self) -> float:
+        """Calculate the score based on user answers."""
+        answer_keys = load_answer_keys()
+        section_answers = answer_keys["answers"].get(f"section{self.section_number}", {})
+
         total_points = sum(q.points for q in self.current_questions)
         earned_points = 0
 
         for question in self.current_questions:
-            if question.id in self.user_answers:
-                user_answer = self.user_answers[question.id]
-                
-                # Eğer çoktan seçmeli ise (liste halinde cevaplar)
-                if isinstance(user_answer, list):
-                    if sorted(map(str, user_answer)) == sorted(map(str, question.correct_answers)):
-                        earned_points += question.points
+            question_id = str(question.id)
+            user_answer = self.user_answers.get(question_id, None)
+            correct_answers = section_answers.get(question_id, [])
 
-                # Eğer tek cevaplı ise (örneğin doğru-yanlış sorusu)
-                elif isinstance(user_answer, str):
-                    if user_answer.strip() in question.correct_answers:
-                        earned_points += question.points
+            if not user_answer:  # Skip unanswered questions
+                continue
+
+            if isinstance(user_answer, list):  # Multiple-choice questions
+                correct_count = len(set(map(str, user_answer)) & set(map(str, correct_answers)))
+                total_correct = len(correct_answers)
+                if total_correct > 0:
+                    correct_ratio = correct_count / total_correct
+                    earned_points += question.points * correct_ratio
+
+            elif isinstance(user_answer, str):  # Single-choice or true/false questions
+                if user_answer.strip() in map(str, correct_answers):
+                    earned_points += question.points
 
         return (earned_points / total_points) * 100 if total_points > 0 else 0.0
-
-
+    
 class QuizManager:
     def __init__(self):
         self.sections = [QuizSection(i) for i in range(1, 5)]
         self.user = None
-
-        # Determined in .env file
         self.time_limit = TIME_LIMIT
         self.attempt_limit = ATTEMPT_LIMIT
-
         self.start_time = None
         self.results = {}
-
-    def add_or_update_question(self, section_number: int):
-        """Bölüm için soru ekle veya güncelle."""
-        section = self.sections[section_number - 1]
-        print("\n1. Add New Question")
-        print("\n2. Update Existing Question")
-        choice = input("Choose an option (1 or 2): ").strip()
-
-        if choice == "1":
-            # Yeni bir soru ekleme
-            question_text = input("Enter the question text: ").strip()
-            options = input("Enter the options (comma-separated): ").strip().split(",")
-            correct_answers = input("Enter the correct answers (comma-separated): ").strip().split(",")
-            points = int(input("Enter the points for the question: ").strip())
-            question_type = input("Enter the question type (true_false, single_choice, multiple_choice): ").strip()
-
-            new_question = Question(
-                id=len(section.questions) + 1,
-                text=question_text,
-                options=options,
-                correct_answers=correct_answers,
-                points=points,
-                type=question_type
-            )
-            section.questions.append(new_question)
-            print("Question added successfully!")
-        elif choice == "2":
-            # Mevcut bir soruyu güncelleme
-            for q in section.questions:
-                print(f"{q.id}. {q.text}")
-            question_id = int(input("Enter the question ID to update: ").strip())
-            question = next((q for q in section.questions if q.id == question_id), None)
-            if not question:
-                print("Invalid question ID.")
-                return
-
-            question.text = input(f"Enter the new text (current: {question.text}): ").strip() or question.text
-            question.options = input(f"Enter the new options (current: {','.join(question.options)}): ").strip().split(",") or question.options
-            question.correct_answers = input(f"Enter the new correct answers (current: {','.join(question.correct_answers)}): ").strip().split(",") or question.correct_answers
-            question.points = int(input(f"Enter the new points (current: {question.points}): ").strip() or question.points)
-            print("Question updated successfully!")
-
-        # Değişiklikleri kaydet
-        self.save_questions(section_number)
-
-    def save_questions(self, section_number: int):
-        """Soruları JSON dosyasına kaydet."""
-        section = self.sections[section_number - 1]
-        file_path = f"questions/questions_section{section_number}.json"
-
-        questions_data = {
-            "questions": [asdict(q) for q in section.questions]
-        }
-
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(questions_data, f, indent=4)
-        print(f"Section {section_number} questions saved successfully!")
 
     def signup(self) -> bool:
         """Sign up a new user."""
@@ -160,13 +122,7 @@ class QuizManager:
             return False
 
         if role == "teacher":
-            try:
-                assigned_section = int(input("Enter assigned section (1-4): ").strip())
-                if assigned_section not in range(1, 5):
-                    raise ValueError("Invalid section number. Must be between 1 and 4.")
-            except ValueError as e:
-                print(e)
-                return False
+            assigned_section = int(input("Enter assigned section (1-4): ").strip())
             new_user = User(
                 name=name,
                 surname=surname,
@@ -181,9 +137,6 @@ class QuizManager:
                 surname=surname,
                 hashed_password=hashed_password.decode('utf-8'),
                 role="student",
-                assigned_section=None,
-                attempt_count=0,
-                last_attempt="",
                 user_class=user_class
             )
         else:
@@ -194,11 +147,104 @@ class QuizManager:
             user_data["users"] = {}
         user_data["users"][user_key] = asdict(new_user)
 
-        self.user = new_user  # `self.user` bir `User` dataclass nesnesi olacak
-
+        self.user = new_user
         self.save_user_data(user_data)
         print("Signup successful!")
         return True
+
+    def signin(self) -> bool:
+        """Sign in an existing user."""
+        name = input("Enter your first name: ").strip()
+        surname = input("Enter your last name: ").strip()
+        password = input("Enter your password: ").strip()
+
+        user_data = self.load_user_data()
+        user_key = f"{name.lower()}_{surname.lower()}"
+
+        if user_key not in user_data.get("users", {}):
+            print("User does not exist. Please sign up.")
+            return False
+
+        user_dict = user_data["users"][user_key]
+        if not bcrypt.checkpw(password.encode('utf-8'), user_dict["hashed_password"].encode('utf-8')):
+            print("Incorrect password. Please try again.")
+            return False
+
+        self.user = User(**user_dict)
+        print(f"Login successful! Welcome {self.user.name}.")
+        if self.user.role == "teacher":
+            self.signin_teacher()
+        elif self.user.role == "student":
+            self.signin_student()
+        else:
+            print("Invalid role.")
+            return False
+        return True
+
+    def add_or_update_question(self, section_number: int):
+        """Add or update a question and its answer key."""
+        section = self.sections[section_number - 1]
+        print("\n1. Add New Question")
+        print("2. Update Existing Question")
+        choice = input("Choose an option (1 or 2): ").strip()
+
+        answer_keys = load_answer_keys()
+        section_answers = answer_keys["answers"].setdefault(f"section{section_number}", {})
+
+        if choice == "1":
+            question_text = input("Enter the question text: ").strip()
+            options = input("Enter the options (comma-separated): ").strip().split(",")
+            correct_answers = input("Enter the correct answers (comma-separated): ").strip().split(",")
+            points = int(input("Enter the points for the question: ").strip())
+            question_type = input("Enter the question type (true_false, single_choice, multiple_choice): ").strip()
+
+            new_question = Question(
+                id=len(section.questions) + 1,
+                text=question_text,
+                options=options,
+                points=points,
+                type=question_type
+            )
+            section.questions.append(new_question)
+            section_answers[str(new_question.id)] = correct_answers
+            print("Question and answer key added successfully!")
+
+        elif choice == "2":
+            for q in section.questions:
+                print(f"{q.id}. {q.text}")
+            question_id = int(input("Enter the question ID to update: ").strip())
+            question = next((q for q in section.questions if q.id == question_id), None)
+            if not question:
+                print("Invalid question ID.")
+                return
+
+            question.text = input(f"Enter the new text (current: {question.text}): ").strip() or question.text
+            question.options = input(f"Enter the new options (current: {','.join(question.options)}): ").strip().split(",") or question.options
+            correct_answers = input(f"Enter the new correct answers: ").strip().split(",")
+            question.points = int(input(f"Enter the new points (current: {question.points}): ").strip() or question.points)
+
+            section_answers[str(question.id)] = correct_answers
+            print("Question and answer key updated successfully!")
+
+        # Save questions to the JSON file
+        self.save_questions(section_number)
+
+        # Save the updated answer keys
+        save_answer_keys(answer_keys)
+
+
+    def save_questions(self, section_number: int):
+        """Soruları JSON dosyasına kaydet."""
+        section = self.sections[section_number - 1]
+        file_path = f"questions/questions_section{section_number}.json"
+
+        questions_data = {
+            "questions": [asdict(q) for q in section.questions]
+        }
+
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(questions_data, f, indent=4)
+        print(f"Section {section_number} questions saved successfully!")
 
     def signin_student(self):
         print("\nWelcome, Student! You can participate in quizzes or view your results.")
@@ -235,77 +281,58 @@ class QuizManager:
                 break
             else:
                 print("Invalid choice. Please choose again.")
-
-    def signin(self) -> bool:
-        """Sign in an existing user."""
-        name = input("Enter your first name: ").strip()
-        surname = input("Enter your last name: ").strip()
-        password = input("Enter your password: ").strip()
-
-        user_data = self.load_user_data()
-        user_key = f"{name.lower()}_{surname.lower()}"
-
-        if user_key not in user_data.get("users", {}):
-            print("User does not exist. Please sign up.")
-            return False
-
-        user_dict = user_data["users"][user_key]
-        if not bcrypt.checkpw(password.encode('utf-8'), user_dict["hashed_password"].encode('utf-8')):
-            print("Incorrect password. Please try again.")
-            return False
-
-        # `self.user` değişkenini bir `User` dataclass nesnesine dönüştür
-        self.user = User(
-            name=user_dict["name"],
-            surname=user_dict["surname"],
-            hashed_password=user_dict["hashed_password"],
-            attempt_count=user_dict.get("attempt_count", 0),
-            last_attempt=user_dict.get("last_attempt", ""),
-            role=user_dict.get("role", "student"),
-            assigned_section=user_dict.get("assigned_section"),
-            user_class=user_dict.get("class", None)
-        )
-        print(f"Login successful! Welcome {self.user.name}.")
-
-        if self.user.role == "teacher":
-            self.signin_teacher()
-        elif self.user.role == "student":
-            self.signin_student()
-        else:
-            print("Invalid role.")
-            return False
-
-        return True
     
     def view_section_statistics(self, section_number: int):
         """Display statistics for the given section."""
-        results_path = "results"
-        total_students = 0
-        total_score = 0
-        passed_count = 0
+        results_file = "results/results.json"
 
-        if os.path.exists(results_path):
-            for file_name in os.listdir(results_path):
-                with open(os.path.join(results_path, file_name), 'r', encoding='utf-8') as f:
-                    result_data = json.load(f)
-                    if f"Section {section_number}" in result_data["results"]:
-                        total_students += 1
-                        score = result_data["results"][f"Section {section_number}"]
-                        total_score += score
-                        if score >= 75:
-                            passed_count += 1
-
-        if total_students == 0:
-            print(f"No data available for Section {section_number}.")
+        if not os.path.exists(results_file):
+            print("No results available.")
             return
 
-        average_score = total_score / total_students
-        pass_rate = (passed_count / total_students) * 100
+        with open(results_file, 'r', encoding='utf-8') as f:
+            results_data = json.load(f)
 
-        print(f"\nSection {section_number} Statistics:")
-        print(f"Total Students: {total_students}")
-        print(f"Average Score: {average_score:.2f}%")
-        print(f"Pass Rate: {pass_rate:.2f}%")
+        # Cumulative stats
+        cumulative_question_stats = {}
+        cumulative_class_stats = {}
+        
+        for date, stats in results_data["results"].items():
+            section_stats = stats["section_statistics"].get(str(section_number), {})
+            
+            # Question-based stats
+            for question_id, question_data in section_stats.get("question_stats", {}).items():
+                if question_id not in cumulative_question_stats:
+                    cumulative_question_stats[question_id] = {"correct": 0, "incorrect": 0}
+                cumulative_question_stats[question_id]["correct"] += question_data.get("correct", 0)
+                cumulative_question_stats[question_id]["incorrect"] += question_data.get("incorrect", 0)
+            
+            # Class-based stats
+            for class_name, class_data in section_stats.get("class_stats", {}).items():
+                if class_name not in cumulative_class_stats:
+                    cumulative_class_stats[class_name] = {"correct": 0, "incorrect": 0}
+                cumulative_class_stats[class_name]["correct"] += class_data.get("correct", 0)
+                cumulative_class_stats[class_name]["incorrect"] += class_data.get("incorrect", 0)
+
+        # Display question-based statistics
+        print("\n--- Question-Based Statistics ---")
+        question_table = []
+        for question_id, stats in cumulative_question_stats.items():
+            question_table.append([
+                f"Question {question_id}",
+                stats["correct"],
+                stats["incorrect"]
+            ])
+        print(tabulate(question_table, headers=["Question", "Correct", "Incorrect"], tablefmt="grid"))
+
+        # Display class-based comparison
+        print("\n--- Class-Based Comparison ---")
+        class_table = []
+        for class_name, stats in cumulative_class_stats.items():
+            total = stats["correct"] + stats["incorrect"]
+            success_rate = (stats["correct"] / total * 100) if total > 0 else 0
+            class_table.append([class_name, f"{success_rate:.2f}"])
+        print(tabulate(class_table, headers=["Class", "Success (%)"], tablefmt="grid"))
 
     def load_user_data(self) -> Dict:
         """Load user data from a JSON file."""
@@ -330,43 +357,32 @@ class QuizManager:
 
     def present_question(self, question: Question) -> Union[str, List[str]]:
         print(f"\nQuestion: {question.text}")
-        
+
         if question.type == "true_false":
             print("1. True")
             print("2. False")
             while True:
-                try:
-                    answer = input("Your answer (1 or 2): ").strip()
-                    if answer in ['1', '2']:
-                        return answer  # String döndürülüyor
-                    print("Please enter 1 (True) or 2 (False).")
-                except ValueError:
-                    print("Invalid input. Please try again.")
-        
+                answer = input("Your answer (1 or 2): ").strip()
+                if answer in ['1', '2']:
+                    return answer  # Kullanıcının cevabını döndür
+
         elif question.type == "single_choice":
             for i, option in enumerate(question.options, 1):
                 print(f"{i}. {option}")
             while True:
-                try:
-                    answer = input("Your answer (enter number): ").strip()
-                    if answer.isdigit() and 1 <= int(answer) <= len(question.options):
-                        return answer  # String döndürülüyor
-                    print(f"Please enter a number between 1 and {len(question.options)}.")
-                except ValueError:
-                    print("Invalid input. Please try again.")
-        
-        else:  # MULTIPLE_CHOICE
+                answer = input("Your answer (enter number): ").strip()
+                if answer.isdigit() and 1 <= int(answer) <= len(question.options):
+                    return answer  # Kullanıcının cevabını döndür
+
+        elif question.type == "multiple_choice":
             for i, option in enumerate(question.options, 1):
                 print(f"{i}. {option}")
             while True:
-                try:
-                    answer = input("Your answers (enter numbers separated by commas): ").strip()
-                    answers = [a.strip() for a in answer.split(',')]
-                    if all(a.isdigit() and 1 <= int(a) <= len(question.options) for a in answers):
-                        return answers  # Liste döndürülüyor
-                    print(f"Please enter valid numbers between 1 and {len(question.options)}.")
-                except ValueError:
-                    print("Invalid input. Please try again.")
+                answer = input("Your answers (enter numbers separated by commas): ").strip()
+                answers = [a.strip() for a in answer.split(',')]
+                if all(a.isdigit() and 1 <= int(a) <= len(question.options) for a in answers):
+                    return answers  # Liste olarak döndür
+
 
     def run_quiz(self):
         """Main quiz execution with signup/signin options."""
@@ -404,34 +420,74 @@ class QuizManager:
                 print("Invalid choice. Please choose again.")
 
     def view_previous_results(self):
-        """Display the user's previous quiz results."""
-        results_path = "results"
-        user_key = f"{self.user.name.lower()}_{self.user.surname.lower()}"
-        user_results = []
-
-        if os.path.exists(results_path):
-            for file_name in os.listdir(results_path):
-                if file_name.startswith(user_key):
-                    with open(os.path.join(results_path, file_name), 'r', encoding='utf-8') as f:
-                        result_data = json.load(f)
-                        user_results.append(result_data)
-        
-        if not user_results:
-            print("\nNo previous results found.")
+        """Display the user's previous quiz results in a tabular format."""
+        results_file = "results/results.json"
+        if not os.path.exists(results_file):
+            print("No results found.")
             return
 
-        print("\n=== Previous Results ===")
-        for result in user_results:
-            print(f"Date: {result['date']}")
-            print(f"Overall Score: {result['overall_score']:.2f}%")
-            print(f"Section Scores: {result['results']}")
-            print("Final Status:", "PASSED" if result['overall_score'] >= 75 else "FAILED")
-            print("-" * 30)
+        with open(results_file, 'r', encoding='utf-8') as f:
+            results_data = json.load(f)
+
+        student_key = f"{self.user.name.lower()}_{self.user.surname.lower()}"
+        found_results = False
+
+        for date, data in results_data["results"].items():
+            student_results = data.get("student_results", {}).get(student_key)
+            if student_results:
+                found_results = True
+                print(f"\n=== Results for {date} ===")
+                print(f"Name: {student_results['name']} {student_results['surname']}")
+                print(f"Class: {student_results['class'] if student_results['class'] else 'N/A'}")
+
+                # Prepare table data for section scores
+                headers = ["Section", "Correct", "Wrong", "Class Average", "School Average", "Score"]
+                table_data = []
+                for section, score in student_results['section_scores'].items():
+                    section_number = section.split()[-1]  # "Section 1" -> "1"
+                    section_data = data["section_statistics"].get(section_number, {})
+                    question_stats = section_data.get("question_stats", {})
+                    class_stats = section_data.get("class_stats", {}).get(self.user.user_class, {})
+                    overall_stats = section_data.get("overall", {})
+
+                    correct = sum(stat["correct"] for stat in question_stats.values())
+                    incorrect = sum(stat["incorrect"] for stat in question_stats.values())
+
+                    # Sınıf ortalamasını hesapla, eğer yoksa varsayılan 50 olarak belirle
+                    class_total = class_stats.get("correct", 0) + class_stats.get("incorrect", 0)
+                    if class_total == 0:
+                        class_average = 50  # Varsayılan değer
+                    else:
+                        class_average = (class_stats.get("correct", 0) / class_total) * 100
+
+                    # Okul ortalamasını hesapla
+                    school_total = overall_stats.get("correct", 0) + overall_stats.get("incorrect", 0)
+                    school_average = (overall_stats.get("correct", 0) / school_total * 100) if school_total > 0 else 0
+
+                    row = [
+                        section,
+                        correct,
+                        incorrect,
+                        round(class_average, 2),
+                        round(school_average, 2),
+                        f"{score:.2f}"
+                    ]
+                    table_data.append(row)
+
+                # Display table
+                print(tabulate(table_data, headers=headers, tablefmt="grid"))
+
+                # Overall Score and Status
+                print(f"\nOverall Score: {round(student_results['overall_score'], 2)}%")
+                print(f"Status: {student_results['status']}")
+
+        if not found_results:
+            print("\nNo previous results found.")
 
     def start_new_quiz(self):
         """Start a new quiz for the logged-in user."""
         # Kullanıcı sınav hakkını kontrol et
-        if self.user.attempt_count >= self.attempt_limit: # ATTEMPT_LIMIT is determined in .env file
+        if self.user.attempt_count >= self.attempt_limit:  # ATTEMPT_LIMIT is determined in .env file
             print("\nYou have exceeded the maximum number of attempts. You cannot start a new quiz.")
             return
 
@@ -444,6 +500,7 @@ class QuizManager:
         input()
 
         self.start_time = time.time()
+        quiz_completed = False
 
         for section in self.sections:
             section.select_random_questions()
@@ -454,17 +511,33 @@ class QuizManager:
                 if remaining_seconds <= 0:
                     print("\nTime's up!")
                     self.calculate_final_results(time_up=True)
-                    return
+                    quiz_completed = True
+                    break
 
                 print(f"\nTime remaining: {remaining_seconds} seconds")
                 answer = self.present_question(question)
-                section.user_answers[question.id] = answer
+                section.user_answers[str(question.id)] = answer  # Cevabı kaydet
 
             section_score = section.calculate_score()
             self.results[f"Section {section.section_number}"] = section_score
             print(f"\nSection {section.section_number} Score: {section_score:.2f}%")
 
+            if quiz_completed:
+                break
+
         self.calculate_final_results()
+        quiz_completed = True
+
+        # Sınav tamamlandıysa deneme sayısını artır ve kaydet
+        if quiz_completed:
+            self.user.attempt_count += 1
+            user_data = self.load_user_data()
+            user_key = f"{self.user.name.lower()}_{self.user.surname.lower()}"
+            if user_key in user_data["users"]:
+                user_data["users"][user_key]["attempt_count"] = self.user.attempt_count
+                user_data["users"][user_key]["last_attempt"] = datetime.now().isoformat()
+                self.save_user_data(user_data)
+
 
     def calculate_final_results(self, time_up=False):
         if not self.results:
@@ -486,29 +559,75 @@ class QuizManager:
         
         self.save_results(overall_score)
 
-
     def save_results(self, overall_score=0):
-        results_data = {
-            "user": asdict(self.user),  # User nesnesini dict'e dönüştür
-            "date": datetime.now().isoformat(),
-            "results": self.results,
-            "overall_score": overall_score
+        """Save the results of the quiz to results.json."""
+        results_file = "results/results.json"
+        if not os.path.exists("results"):
+            os.makedirs("results")
+
+        try:
+            with open(results_file, 'r', encoding='utf-8') as f:
+                results_json = json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            results_json = {"results": {}}
+
+        # Tarih bazlı anahtar için sonuçları ekle
+        date_key = datetime.now().strftime("%Y-%m-%d")
+        if date_key not in results_json["results"]:
+            results_json["results"][date_key] = {
+                "student_results": {},
+                "section_statistics": {},
+            }
+
+        # Öğrenci sonuçlarını ekle
+        student_key = f"{self.user.name.lower()}_{self.user.surname.lower()}"
+        results_json["results"][date_key]["student_results"][student_key] = {
+            "name": self.user.name,
+            "surname": self.user.surname,
+            "class": self.user.user_class,
+            "section_scores": self.results,
+            "overall_score": overall_score,
+            "status": "PASSED" if overall_score >= 75 else "FAILED"
         }
 
-        # Kullanıcının sınav tarihini ve deneme sayısını güncelle
-        user_data = self.load_user_data()
-        user_key = f"{self.user.name.lower()}_{self.user.surname.lower()}"
-        if user_key in user_data.get("users", {}):
-            user_data["users"][user_key]["attempt_count"] += 1
-            user_data["users"][user_key]["last_attempt"] = datetime.now().isoformat()
-        
-        self.save_user_data(user_data)  # Kullanıcı bilgilerini kaydet
+        # Bölüm bazlı istatistikleri güncelle
+        section_statistics = results_json["results"][date_key]["section_statistics"]
+        for section, score in self.results.items():
+            section_number = section.split()[-1]  # "Section 1" -> "1"
+            section_data = section_statistics.setdefault(section_number, {
+                "question_stats": {},
+                "class_stats": {},
+                "overall": {"correct": 0, "incorrect": 0},
+            })
 
-        os.makedirs("results", exist_ok=True)
-        filename = f"results/{self.user.name.lower()}_{self.user.surname.lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
-        with open(filename, 'w', encoding='utf-8') as f:
-            json.dump(results_data, f, indent=4)
+            # Soru bazlı doğru/yanlış sayıları
+            for question_id, user_answer in self.sections[int(section_number) - 1].user_answers.items():
+                question_stats = section_data["question_stats"].setdefault(question_id, {"correct": 0, "incorrect": 0})
+                correct_answers = load_answer_keys()["answers"][f"section{section_number}"].get(question_id, [])
 
+                if isinstance(user_answer, list):
+                    correct = len(set(map(str, user_answer)) & set(map(str, correct_answers))) == len(correct_answers)
+                else:
+                    correct = user_answer.strip() in correct_answers
+
+                if correct:
+                    question_stats["correct"] += 1
+                    section_data["overall"]["correct"] += 1
+                else:
+                    question_stats["incorrect"] += 1
+                    section_data["overall"]["incorrect"] += 1
+
+            # Sınıf bazlı doğru/yanlış sayıları
+            class_name = self.user.user_class or "Unknown"
+            class_stats = section_data["class_stats"].setdefault(class_name, {"correct": 0, "incorrect": 0})
+            class_stats["correct"] = section_data["overall"]["correct"]
+            class_stats["incorrect"] = section_data["overall"]["incorrect"]
+
+        # Dosyayı kaydet
+        with open(results_file, 'w', encoding='utf-8') as f:
+            json.dump(results_json, f, indent=4, ensure_ascii=False)
+
+        print("Results saved successfully.")
 
 
 if __name__ == "__main__":
