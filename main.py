@@ -6,12 +6,18 @@ from typing import Dict, List, Union
 import os
 from dataclasses import dataclass, asdict
 import bcrypt
+from dotenv import load_dotenv 
 
+# Ortam değişkenlerini .env dosyasından yükle 
+load_dotenv()
 # Retrieve values from environment variables
 TIME_LIMIT = int(os.getenv("TIME_LIMIT"))
 ATTEMPT_LIMIT = int(os.getenv("ATTEMPT_LIMIT"))
 MAX_QUESTIONS_PER_SECTION = int(os.getenv("MAX_QUESTIONS_PER_SECTION"))
 ENCRYPTION_KEY = os.getenv("ENCRYPTION_KEY")
+
+
+
 
 
 @dataclass
