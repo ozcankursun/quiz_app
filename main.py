@@ -44,7 +44,7 @@ class User:
     hashed_password: str
     role: str = "student"
     assigned_section: Union[int, None] = None
-    user_class: Union[str, None] = None
+    user_class: Union[str, None] = None  # Daha önce 'class' idi
     attempt_count: int = 0
     last_attempt: str = ""
 
@@ -69,10 +69,8 @@ class QuizSection:
         self.current_questions = random.sample(self.questions, self.max_questions_per_section)
 
     def calculate_score(self) -> float:
-        """Calculate the score based on user answers."""
         answer_keys = load_answer_keys()
         section_answers = answer_keys["answers"].get(f"section{self.section_number}", {})
-
         total_points = sum(q.points for q in self.current_questions)
         earned_points = 0
 
@@ -81,21 +79,23 @@ class QuizSection:
             user_answer = self.user_answers.get(question_id, None)
             correct_answers = section_answers.get(question_id, [])
 
-            if not user_answer:  # Skip unanswered questions
+            if not user_answer:  # Yanıt verilmediyse geç
                 continue
 
-            if isinstance(user_answer, list):  # Multiple-choice questions
+            if isinstance(user_answer, list):  # Çoktan seçmeli sorular
                 correct_count = len(set(map(str, user_answer)) & set(map(str, correct_answers)))
                 total_correct = len(correct_answers)
+
                 if total_correct > 0:
                     correct_ratio = correct_count / total_correct
                     earned_points += question.points * correct_ratio
 
-            elif isinstance(user_answer, str):  # Single-choice or true/false questions
+            elif isinstance(user_answer, str):  # Tek yanıtlı veya doğru/yanlış sorular
                 if user_answer.strip() in map(str, correct_answers):
                     earned_points += question.points
 
         return (earned_points / total_points) * 100 if total_points > 0 else 0.0
+
     
 class QuizManager:
     def __init__(self):
@@ -164,7 +164,6 @@ class QuizManager:
         print("Signup successful!")
         return True
 
-
     def signin(self) -> bool:
         """Sign in an existing user."""
         name = input("Enter your first name: ").strip()
@@ -183,7 +182,17 @@ class QuizManager:
             print("Incorrect password. Please try again.")
             return False
 
-        self.user = User(**user_dict)
+        # Directly map the dictionary values to User class attributes
+        self.user = User(
+            name=user_dict["name"],
+            surname=user_dict["surname"],
+            hashed_password=user_dict["hashed_password"],
+            role=user_dict.get("role", "student"),
+            assigned_section=user_dict.get("assigned_section"),
+            user_class=user_dict.get("user_class"),  # 'class' -> 'user_class'
+            attempt_count=user_dict.get("attempt_count", 0),
+            last_attempt=user_dict.get("last_attempt", ""),
+        )
         print(f"Login successful! Welcome {self.user.name}.")
         if self.user.role == "teacher":
             self.signin_teacher()
@@ -244,7 +253,6 @@ class QuizManager:
 
         # Save the updated answer keys
         save_answer_keys(answer_keys)
-
 
     def save_questions(self, section_number: int):
         """Soruları JSON dosyasına kaydet."""
@@ -489,7 +497,7 @@ class QuizManager:
                 print(f"Class: {student_results['class'] if student_results['class'] else 'N/A'}")
 
                 # Prepare table data for section scores
-                headers = ["Section", "Correct", "Wrong", "Class Average", "School Average", "Score"]
+                headers = ["Section", "Correct", "Wrong", "Class Average", "School Average", "Score", "Comparison"]
                 table_data = []
                 for section, score in student_results['section_scores'].items():
                     section_number = section.split()[-1]  # "Section 1" -> "1"
@@ -501,10 +509,10 @@ class QuizManager:
                     correct = sum(stat["correct"] for stat in question_stats.values())
                     incorrect = sum(stat["incorrect"] for stat in question_stats.values())
 
-                    # Sınıf ortalamasını hesapla, eğer yoksa varsayılan 50 olarak belirle
+                    # Sınıf ortalamasını hesapla, eğer veri yoksa varsayılan 50 olarak belirle
                     class_total = class_stats.get("correct", 0) + class_stats.get("incorrect", 0)
                     if class_total == 0:
-                        class_average = 50  # Varsayılan değer
+                        class_average = 50.0  # Varsayılan değer
                     else:
                         class_average = (class_stats.get("correct", 0) / class_total) * 100
 
@@ -512,13 +520,17 @@ class QuizManager:
                     school_total = overall_stats.get("correct", 0) + overall_stats.get("incorrect", 0)
                     school_average = (overall_stats.get("correct", 0) / school_total * 100) if school_total > 0 else 0
 
+                    # Kullanıcı performans karşılaştırması
+                    comparison = "Above Average" if score > class_average else "Below Average"
+
                     row = [
                         section,
                         correct,
                         incorrect,
                         round(class_average, 2),
                         round(school_average, 2),
-                        f"{score:.2f}"
+                        f"{score:.2f}",
+                        comparison
                     ]
                     table_data.append(row)
 
@@ -608,7 +620,6 @@ class QuizManager:
         self.save_results(overall_score)
 
     def save_results(self, overall_score=0):
-        """Save the results of the quiz to results.json."""
         results_file = "results/results.json"
         if not os.path.exists("results"):
             os.makedirs("results")
@@ -619,7 +630,6 @@ class QuizManager:
         except (FileNotFoundError, json.JSONDecodeError):
             results_json = {"results": {}}
 
-        # Tarih bazlı anahtar için sonuçları ekle
         date_key = datetime.now().strftime("%Y-%m-%d")
         if date_key not in results_json["results"]:
             results_json["results"][date_key] = {
@@ -627,7 +637,6 @@ class QuizManager:
                 "section_statistics": {},
             }
 
-        # Öğrenci sonuçlarını ekle
         student_key = f"{self.user.name.lower()}_{self.user.surname.lower()}"
         results_json["results"][date_key]["student_results"][student_key] = {
             "name": self.user.name,
@@ -638,7 +647,6 @@ class QuizManager:
             "status": "PASSED" if overall_score >= 75 else "FAILED"
         }
 
-        # Bölüm bazlı istatistikleri güncelle
         section_statistics = results_json["results"][date_key]["section_statistics"]
         for section, score in self.results.items():
             section_number = section.split()[-1]  # "Section 1" -> "1"
@@ -648,7 +656,6 @@ class QuizManager:
                 "overall": {"correct": 0, "incorrect": 0},
             })
 
-            # Soru bazlı doğru/yanlış sayıları
             for question_id, user_answer in self.sections[int(section_number) - 1].user_answers.items():
                 question_stats = section_data["question_stats"].setdefault(question_id, {"correct": 0, "incorrect": 0})
                 correct_answers = load_answer_keys()["answers"][f"section{section_number}"].get(question_id, [])
@@ -665,17 +672,16 @@ class QuizManager:
                     question_stats["incorrect"] += 1
                     section_data["overall"]["incorrect"] += 1
 
-            # Sınıf bazlı doğru/yanlış sayıları
             class_name = self.user.user_class or "Unknown"
             class_stats = section_data["class_stats"].setdefault(class_name, {"correct": 0, "incorrect": 0})
             class_stats["correct"] = section_data["overall"]["correct"]
             class_stats["incorrect"] = section_data["overall"]["incorrect"]
 
-        # Dosyayı kaydet
         with open(results_file, 'w', encoding='utf-8') as f:
             json.dump(results_json, f, indent=4, ensure_ascii=False)
 
         print("Results saved successfully.")
+
 
 
 if __name__ == "__main__":
