@@ -114,10 +114,6 @@ class QuizManager:
 
     def signup(self) -> bool:
         """Sign up a new user."""
-        name = input("Enter your first name: ").strip()
-        surname = input("Enter your last name: ").strip()
-        password = input("Set your password: ").strip()
-
         while True:
             role = input("Enter role (teacher/student): ").strip().lower()
             if role in ["teacher", "student"]:
@@ -125,11 +121,7 @@ class QuizManager:
             else:
                 print("Invalid role. Please enter 'teacher' or 'student'.")
 
-        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
-        user_data = self.load_user_data()
-
         if role == "student":
-            # Sadece öğrenciler için Student ID istenir
             while True:
                 try:
                     student_id = int(input("Enter your Student ID: ").strip())
@@ -139,11 +131,25 @@ class QuizManager:
                         print("Invalid ID. Please enter a 3 or 4 digit Student ID.")
                 except ValueError:
                     print("Invalid input. Please enter a numeric Student ID.")
+        else:  # Teacher rolü için ID istemiyoruz
+            student_id = None
 
-            if str(student_id) in user_data.get("users", {}):
-                print("Student ID already exists. Please sign in or use a different ID.")
-                return False
+        name = input("Enter your first name: ").strip()
+        surname = input("Enter your last name: ").strip()
+        password = input("Set your password: ").strip()
 
+        hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+        user_data = self.load_user_data()
+
+        # Benzersizlik kontrolü
+        if role == "student" and str(student_id) in user_data.get("users", {}):
+            print("Student ID already exists. Please sign in or use a different ID.")
+            return False
+        if role == "teacher" and f"{name.lower()}_{surname.lower()}" in user_data.get("users", {}):
+            print("Teacher with this name already exists. Please sign in.")
+            return False
+
+        if role == "student":
             user_class = input("Enter class (e.g., 7-A): ").strip()
             new_user = User(
                 student_id=str(student_id),
@@ -153,21 +159,10 @@ class QuizManager:
                 role="student",
                 user_class=user_class
             )
-
         elif role == "teacher":
-            # Öğretmenler için Student ID yerine Assigned Section alınır
-            while True:
-                try:
-                    assigned_section = int(input("Enter assigned section (1-4): ").strip())
-                    if 1 <= assigned_section <= 4:
-                        break
-                    else:
-                        print("Invalid input. Please enter a number between 1 and 4.")
-                except ValueError:
-                    print("Invalid input. Please enter a valid number.")
-
+            assigned_section = int(input("Enter assigned section (1-4): ").strip())
             new_user = User(
-                student_id=None,  # Öğretmenler için ID alanı boş bırakılır
+                student_id=None,
                 name=name,
                 surname=surname,
                 hashed_password=hashed_password.decode('utf-8'),
@@ -178,52 +173,66 @@ class QuizManager:
         if "users" not in user_data:
             user_data["users"] = {}
 
-        # Kullanıcıyı kaydet
-        user_key = str(student_id) if role == "student" else f"{name.lower()}_{surname.lower()}"
-        user_data["users"][user_key] = asdict(new_user)
+        if role == "student":
+            user_data["users"][str(student_id)] = asdict(new_user)
+        elif role == "teacher":
+            user_data["users"][f"{name.lower()}_{surname.lower()}"] = asdict(new_user)
+
+        # Öğrenciye özel alanları gereksiz durumlarda kaldır
+        if role == "teacher":
+            user_data["users"][f"{name.lower()}_{surname.lower()}"].pop("user_class", None)
+            user_data["users"][f"{name.lower()}_{surname.lower()}"].pop("attempt_count", None)
+            user_data["users"][f"{name.lower()}_{surname.lower()}"].pop("last_attempt", None)
 
         self.user = new_user
         self.save_user_data(user_data)
-        print("Signup successful!")
+        print(f"Signup successful for {role.capitalize()}!")
         return True
 
     def signin(self) -> bool:
         """Sign in an existing user."""
         role = input("Enter role (teacher/student): ").strip().lower()
+        if role not in ["teacher", "student"]:
+            print("Invalid role. Please enter 'teacher' or 'student'.")
+            return False
 
         if role == "student":
             student_id = input("Enter your Student ID: ").strip()
-            user_key = student_id
+            if student_id not in self.load_user_data().get("users", {}):
+                print("Student ID does not exist. Please sign up.")
+                return False
         elif role == "teacher":
-            name = input("Enter your first name: ").strip()
-            surname = input("Enter your last name: ").strip()
-            user_key = f"{name.lower()}_{surname.lower()}"
-        else:
-            print("Invalid role. Please enter 'teacher' or 'student'.")
-            return False
+            name = input("Enter your first name: ").strip().lower()
+            surname = input("Enter your last name: ").strip().lower()
+            teacher_key = f"{name}_{surname}"
+            if teacher_key not in self.load_user_data().get("users", {}):
+                print("Teacher with this name does not exist. Please sign up.")
+                return False
 
         password = input("Enter your password: ").strip()
         user_data = self.load_user_data()
 
-        if user_key not in user_data.get("users", {}):
-            print("User does not exist. Please sign up.")
-            return False
-
-        user_dict = user_data["users"][user_key]
+        # Kullanıcıyı al
+        user_dict = (
+            user_data["users"][student_id]
+            if role == "student"
+            else user_data["users"][teacher_key]
+        )
         if not bcrypt.checkpw(password.encode('utf-8'), user_dict["hashed_password"].encode('utf-8')):
             print("Incorrect password. Please try again.")
             return False
 
+        # Kullanıcıyı yükle
         self.user = User(
             student_id=user_dict.get("student_id"),
             name=user_dict["name"],
             surname=user_dict["surname"],
             hashed_password=user_dict["hashed_password"],
-            role=user_dict.get("role", "student"),
+            role=user_dict.get("role"),
             assigned_section=user_dict.get("assigned_section"),
             user_class=user_dict.get("user_class"),
             attempt_count=user_dict.get("attempt_count", 0),
-            last_attempt=user_dict.get("last_attempt", ""),
+            last_attempt=user_dict.get("last_attempt", "")
         )
         print(f"Login successful! Welcome {self.user.name}.")
         if self.user.role == "teacher":
@@ -345,14 +354,22 @@ class QuizManager:
             return
 
         with open(results_file, 'r', encoding='utf-8') as f:
-            results_data = json.load(f)
+            try:
+                results_data = json.load(f)
+            except json.JSONDecodeError:
+                print("Results file is corrupted.")
+                return
+
+        # 'section_statistics' anahtarını kontrol edin
+        if "section_statistics" not in results_data:
+            results_data["section_statistics"] = {}
 
         cumulative_question_stats = {}
         cumulative_class_stats = {}
 
         # Aggregate data from all dates for the specified section
-        for date, stats in results_data["results"].items():
-            section_stats = stats["section_statistics"].get(str(section_number), {})
+        for date, stats in results_data.get("results", {}).items():
+            section_stats = stats.get("section_statistics", {}).get(str(section_number), {})
 
             # Question-based stats
             for question_id, question_data in section_stats.get("question_stats", {}).items():
@@ -415,6 +432,7 @@ class QuizManager:
             class_table.append([class_name, stats["correct"], stats["incorrect"], f"{success_rate:.2f}%"])
 
         print(tabulate(class_table, headers=["Class", "Correct", "Incorrect", "Success Rate"], tablefmt="grid"))
+
 
 
     def load_user_data(self) -> Dict:
@@ -698,8 +716,6 @@ class QuizManager:
             json.dump(results_json, f, indent=4, ensure_ascii=False)
 
         print("Results saved successfully.")
-
-
 
 
 if __name__ == "__main__":

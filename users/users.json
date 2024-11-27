@@ -4,7 +4,7 @@
             "student_id": "101",
             "name": "Ali",
             "surname": "Kaya",
-            "hashed_password": "$2b$12$MfQKUiy2oTM0C54Qa2aR4uU/oKAgWJ3EazmsjFpjcxGoZm2H8EPSK",
+            "hashed_password": "$2b$12$ehoHrk0I1YQJMqOgUJfWRe6F4DYIua2TNpgqCVJAfZx4xj9KlbhvG",
             "role": "student",
             "user_class": "7-A",
             "attempt_count": 0,
@@ -64,7 +64,6 @@
             "surname": "Okur",
             "hashed_password": "$2b$12$tsWohGZAijuD/BxzsLVl5ueD1/tYGCstLn3ifd6eQFAZva/EMGedi",
             "role": "student",
-            "assigned_section": null,
             "user_class": "7-B",
             "attempt_count": 0,
             "last_attempt": ""
