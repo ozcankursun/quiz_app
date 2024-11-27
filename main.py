@@ -711,17 +711,17 @@ class QuizManager:
         print("Results saved successfully.")
 
 
-                if isinstance(user_answer, list):
-                    correct = len(set(map(str, user_answer)) & set(map(str, correct_answers))) == len(correct_answers)
-                else:
-                    correct = user_answer.strip() in correct_answers
+        if isinstance(user_answer, list):
+            correct = len(set(map(str, user_answer)) & set(map(str, correct_answers))) == len(correct_answers)
+        else:
+            correct = user_answer.strip() in correct_answers
 
-                if correct:
-                    question_stats["correct"] += 1
-                    section_data["overall"]["correct"] += 1
-                else:
-                    question_stats["incorrect"] += 1
-                    section_data["overall"]["incorrect"] += 1
+        if correct:
+            question_stats["correct"] += 1
+            section_data["overall"]["correct"] += 1
+        else:
+            question_stats["incorrect"] += 1
+            section_data["overall"]["incorrect"] += 1
 
             # Sınıf bazlı doğru/yanlış sayıları
             class_name = self.user.user_class or "Unknown"
