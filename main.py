@@ -8,7 +8,6 @@ from dataclasses import dataclass, asdict
 import bcrypt
 from tabulate import tabulate
 from dotenv import load_dotenv
-import uuid
 
 
 # Ortam değişkenlerini .env dosyasından yükle 
@@ -115,16 +114,6 @@ class QuizManager:
 
     def signup(self) -> bool:
         """Sign up a new user."""
-        while True:
-            try:
-                student_id = int(input("Enter your Student ID: ").strip())
-                if len(str(student_id)) in [3, 4]:  # ID uzunluğu kontrolü (3 veya 4 basamaklı olmalı)
-                    break
-                else:
-                    print("Invalid ID. Please enter a 3 or 4 digit Student ID.")
-            except ValueError:
-                print("Invalid input. Please enter a numeric Student ID.")
-
         name = input("Enter your first name: ").strip()
         surname = input("Enter your last name: ").strip()
         password = input("Set your password: ").strip()
@@ -139,22 +128,25 @@ class QuizManager:
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
         user_data = self.load_user_data()
 
-        if str(student_id) in user_data.get("users", {}):
-            print("Student ID already exists. Please sign in or use a different ID.")
-            return False
+        if role == "student":
+            # Sadece öğrenciler için Student ID istenir
+            while True:
+                try:
+                    student_id = int(input("Enter your Student ID: ").strip())
+                    if len(str(student_id)) in [3, 4]:  # ID uzunluğu kontrolü (3 veya 4 basamaklı olmalı)
+                        break
+                    else:
+                        print("Invalid ID. Please enter a 3 or 4 digit Student ID.")
+                except ValueError:
+                    print("Invalid input. Please enter a numeric Student ID.")
 
-        if role == "teacher":
-            assigned_section = int(input("Enter assigned section (1-4): ").strip())
-            new_user = User(
-                name=name,
-                surname=surname,
-                hashed_password=hashed_password.decode('utf-8'),
-                role="teacher",
-                assigned_section=assigned_section
-            )
-        elif role == "student":
+            if str(student_id) in user_data.get("users", {}):
+                print("Student ID already exists. Please sign in or use a different ID.")
+                return False
+
             user_class = input("Enter class (e.g., 7-A): ").strip()
             new_user = User(
+                student_id=str(student_id),
                 name=name,
                 surname=surname,
                 hashed_password=hashed_password.decode('utf-8'),
@@ -162,11 +154,33 @@ class QuizManager:
                 user_class=user_class
             )
 
+        elif role == "teacher":
+            # Öğretmenler için Student ID yerine Assigned Section alınır
+            while True:
+                try:
+                    assigned_section = int(input("Enter assigned section (1-4): ").strip())
+                    if 1 <= assigned_section <= 4:
+                        break
+                    else:
+                        print("Invalid input. Please enter a number between 1 and 4.")
+                except ValueError:
+                    print("Invalid input. Please enter a valid number.")
+
+            new_user = User(
+                student_id=None,  # Öğretmenler için ID alanı boş bırakılır
+                name=name,
+                surname=surname,
+                hashed_password=hashed_password.decode('utf-8'),
+                role="teacher",
+                assigned_section=assigned_section
+            )
+
         if "users" not in user_data:
             user_data["users"] = {}
 
-        # Öğrenci numarasını kullanıcı anahtarı olarak kullanıyoruz
-        user_data["users"][str(student_id)] = asdict(new_user)
+        # Kullanıcıyı kaydet
+        user_key = str(student_id) if role == "student" else f"{name.lower()}_{surname.lower()}"
+        user_data["users"][user_key] = asdict(new_user)
 
         self.user = new_user
         self.save_user_data(user_data)
@@ -175,30 +189,33 @@ class QuizManager:
 
     def signin(self) -> bool:
         """Sign in an existing user."""
-        while True:
-            try:
-                student_id = input("Enter your Student ID: ").strip()
-                if student_id.isdigit():
-                    break
-                else:
-                    print("Invalid ID. Please enter a numeric Student ID.")
-            except ValueError:
-                print("Invalid input. Please enter your Student ID.")
+        role = input("Enter role (teacher/student): ").strip().lower()
+
+        if role == "student":
+            student_id = input("Enter your Student ID: ").strip()
+            user_key = student_id
+        elif role == "teacher":
+            name = input("Enter your first name: ").strip()
+            surname = input("Enter your last name: ").strip()
+            user_key = f"{name.lower()}_{surname.lower()}"
+        else:
+            print("Invalid role. Please enter 'teacher' or 'student'.")
+            return False
 
         password = input("Enter your password: ").strip()
         user_data = self.load_user_data()
 
-        if student_id not in user_data.get("users", {}):
-            print("Student ID does not exist. Please sign up.")
+        if user_key not in user_data.get("users", {}):
+            print("User does not exist. Please sign up.")
             return False
 
-        user_dict = user_data["users"][student_id]
+        user_dict = user_data["users"][user_key]
         if not bcrypt.checkpw(password.encode('utf-8'), user_dict["hashed_password"].encode('utf-8')):
             print("Incorrect password. Please try again.")
             return False
 
-        # Kullanıcıyı yükle
         self.user = User(
+            student_id=user_dict.get("student_id"),
             name=user_dict["name"],
             surname=user_dict["surname"],
             hashed_password=user_dict["hashed_password"],
@@ -217,6 +234,7 @@ class QuizManager:
             print("Invalid role.")
             return False
         return True
+
 
     def add_or_update_question(self, section_number: int):
         """Add or update a question and its answer key."""
@@ -401,17 +419,28 @@ class QuizManager:
 
     def load_user_data(self) -> Dict:
         """Load user data from a JSON file."""
+        file_path = "users/users.json"
+        if not os.path.exists(file_path):
+            # Dosya yoksa varsayılan yapı döndür
+            return {"users": {}}
+
         try:
-            with open("users/users.json", 'r', encoding='utf-8') as f:
+            with open(file_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
-        except FileNotFoundError:
-            return {}
+        except (json.JSONDecodeError, FileNotFoundError):
+            # JSON bozuksa veya dosya bulunamıyorsa varsayılan yapı döndür
+            print("Warning: users.json file is empty or corrupted. Re-initializing data.")
+            return {"users": {}}
+
+
 
     def save_user_data(self, user_data: Dict):
         """Save user data to a JSON file."""
-        os.makedirs("users", exist_ok=True)
-        with open("users/users.json", 'w', encoding='utf-8') as f:
-            json.dump(user_data, f, indent=4)
+        file_path = "users/users.json"
+        os.makedirs(os.path.dirname(file_path), exist_ok=True)  # Klasör yoksa oluştur
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(user_data, f, indent=4, ensure_ascii=False)
+
 
     def check_time_remaining(self) -> int:
         """Check remaining time for the quiz."""
@@ -454,7 +483,6 @@ class QuizManager:
                 else:
                     print("Invalid input. Please enter valid numbers separated by commas.")
 
-
     def run_quiz(self):
         """Main quiz execution with signup/signin options."""
         while True:  # Loop until the user makes a valid choice
@@ -471,6 +499,10 @@ class QuizManager:
                     break
             else:
                 print("Invalid choice. Please choose a valid option.\n")
+
+        if self.user is None:
+            print("Error: User session not initialized. Exiting.")
+            return
 
         while True:
             # Display post-login options
@@ -534,13 +566,23 @@ class QuizManager:
 
                 table_data.append([
                     section,
-                    f"{score:.2f}%",
-                    f"{class_average:.2f}%",
-                    f"{school_average:.2f}%",
+                    score,
+                    class_average,
+                    school_average,
                     comparison
                 ])
 
-            print(tabulate(table_data, headers=headers, tablefmt="grid"))
+            # Tabloyu yazdır
+            formatted_table_data = [
+                [
+                    row[0],
+                    f"{row[1]:.2f}%",
+                    f"{row[2]:.2f}%",
+                    f"{row[3]:.2f}%",
+                    row[4]
+                ] for row in table_data
+            ]
+            print(tabulate(formatted_table_data, headers=headers, tablefmt="grid"))
 
             # Genel karşılaştırma
             overall_class_average = sum(row[2] for row in table_data) / len(table_data)

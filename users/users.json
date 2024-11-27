@@ -1,5 +1,35 @@
 {
     "users": {
+        "101": {
+            "student_id": "101",
+            "name": "Ali",
+            "surname": "Kaya",
+            "hashed_password": "$2b$12$MfQKUiy2oTM0C54Qa2aR4uU/oKAgWJ3EazmsjFpjcxGoZm2H8EPSK",
+            "role": "student",
+            "user_class": "7-A",
+            "attempt_count": 0,
+            "last_attempt": ""
+        },
+        "102": {
+            "student_id": "102",
+            "name": "Ayse",
+            "surname": "Dag",
+            "hashed_password": "$2b$12$MfQKUiy2oTM0C54Qa2aR4uU/oKAgWJ3EazmsjFpjcxGoZm2H8EPSK",
+            "role": "student",
+            "user_class": "7-B",
+            "attempt_count": 0,
+            "last_attempt": ""
+        },
+        "103": {
+            "student_id": "103",
+            "name": "Elif",
+            "surname": "Yildiz",
+            "hashed_password": "$2b$12$MfQKUiy2oTM0C54Qa2aR4uU/oKAgWJ3EazmsjFpjcxGoZm2H8EPSK",
+            "role": "student",
+            "user_class": "7-D",
+            "attempt_count": 0,
+            "last_attempt": ""
+        },
         "omer_html": {
             "name": "Omer",
             "surname": "Html",
@@ -21,53 +51,12 @@
             "role": "teacher",
             "assigned_section": 4
         },
-        "ali_kaya": {
-            "name": "Ali",
-            "surname": "Kaya",
-            "hashed_password": "$2b$12$MfQKUiy2oTM0C54Qa2aR4uU/oKAgWJ3EazmsjFpjcxGoZm2H8EPSK",
-            "role": "student",
-            "class": "7-A",
-            "attempt_count": 0,
-            "last_attempt": ""
-        },
-        "ayse_dag": {
-            "name": "Ayse",
-            "surname": "Dag",
-            "hashed_password": "$2b$12$MfQKUiy2oTM0C54Qa2aR4uU/oKAgWJ3EazmsjFpjcxGoZm2H8EPSK",
-            "role": "student",
-            "class": "7-B",
-            "attempt_count": 0,
-            "last_attempt": ""
-        },
-        "elif_yildiz": {
-            "name": "Elif",
-            "surname": "Yildiz",
-            "hashed_password": "$2b$12$MfQKUiy2oTM0C54Qa2aR4uU/oKAgWJ3EazmsjFpjcxGoZm2H8EPSK",
-            "role": "student",
-            "class": "7-D",
-            "attempt_count": 0,
-            "last_attempt": ""
-        },
         "ozcan_python": {
             "name": "Ozcan",
             "surname": "Python",
             "hashed_password": "$2b$12$7/GqV.mpnFl5YudqU7Lyr.YZHJb9zm.rns.NqExCAnd23CvtbY/xe",
             "role": "teacher",
-            "assigned_section": 1,
-            "user_class": null,
-            "attempt_count": 0,
-            "last_attempt": ""
-        },
-        "6967a61a-ff3b-4c84-bf51-873d079eb649": {
-            "student_id": "6967a61a-ff3b-4c84-bf51-873d079eb649",
-            "name": "a",
-            "surname": "a",
-            "hashed_password": "$2b$12$FCne3IlU91dfu8TrY48WXOh/gYJ80vORGV3Ot1CcF81WQVpGvovKO",
-            "role": "student",
-            "assigned_section": null,
-            "user_class": "7-A",
-            "attempt_count": 0,
-            "last_attempt": ""
+            "assigned_section": 1
         }
     }
 }
