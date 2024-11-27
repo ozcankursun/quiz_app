@@ -77,6 +77,28 @@
             "user_class": "7-A",
             "attempt_count": 1,
             "last_attempt": "2024-11-26T17:01:20.963483"
+
+        },
+        "deneme_dene": {
+            "name": "Deneme",
+            "surname": "dene",
+            "hashed_password": "$2b$12$Vz5Vsx23aA2oV4Bu8mebM.JhzM8HNYaS6VWmYLqwhcKT2HR2pRUya",
+            "role": "student",
+            "assigned_section": null,
+            "user_class": "7-A",
+            "attempt_count": 2,
+            "last_attempt": "2024-11-27T09:13:38.949821"
+        },
+        "aa_aa": {
+            "name": "aa",
+            "surname": "aa",
+            "hashed_password": "$2b$12$rfeLdmDWYSjrvJf6tNMdp.aBt8SRAAITp/xDjhiTyPLVlq/T3/irW",
+            "role": "student",
+            "assigned_section": null,
+            "user_class": "7-A",
+            "attempt_count": 2,
+            "last_attempt": "2024-11-27T09:29:43.741384"
+
         }
     }
 }
