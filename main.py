@@ -111,7 +111,13 @@ class QuizManager:
         name = input("Enter your first name: ").strip()
         surname = input("Enter your last name: ").strip()
         password = input("Set your password: ").strip()
-        role = input("Enter role (teacher/student): ").strip().lower()
+        
+        while True:
+            role = input("Enter role (teacher/student): ").strip().lower()
+            if role in ["teacher", "student"]:
+                break
+            else:
+                print("Invalid role. Please enter 'teacher' or 'student'.")
 
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
         user_data = self.load_user_data()
@@ -122,7 +128,16 @@ class QuizManager:
             return False
 
         if role == "teacher":
-            assigned_section = int(input("Enter assigned section (1-4): ").strip())
+            while True:
+                try:
+                    assigned_section = int(input("Enter assigned section (1-4): ").strip())
+                    if 1 <= assigned_section <= 4:
+                        break
+                    else:
+                        print("Invalid input. Please enter a number between 1 and 4.")
+                except ValueError:
+                    print("Invalid input. Please enter a valid number.")
+
             new_user = User(
                 name=name,
                 surname=surname,
@@ -139,9 +154,6 @@ class QuizManager:
                 role="student",
                 user_class=user_class
             )
-        else:
-            print("Invalid role.")
-            return False
 
         if "users" not in user_data:
             user_data["users"] = {}
@@ -151,6 +163,7 @@ class QuizManager:
         self.save_user_data(user_data)
         print("Signup successful!")
         return True
+
 
     def signin(self) -> bool:
         """Sign in an existing user."""
@@ -283,7 +296,7 @@ class QuizManager:
                 print("Invalid choice. Please choose again.")
     
     def view_section_statistics(self, section_number: int):
-        """Display statistics for the given section."""
+        """Display detailed statistics for the given section, including class-wise comparisons."""
         results_file = "results/results.json"
 
         if not os.path.exists(results_file):
@@ -293,20 +306,26 @@ class QuizManager:
         with open(results_file, 'r', encoding='utf-8') as f:
             results_data = json.load(f)
 
-        # Cumulative stats
         cumulative_question_stats = {}
         cumulative_class_stats = {}
-        
+
+        # Aggregate data from all dates for the specified section
         for date, stats in results_data["results"].items():
             section_stats = stats["section_statistics"].get(str(section_number), {})
-            
+
             # Question-based stats
             for question_id, question_data in section_stats.get("question_stats", {}).items():
                 if question_id not in cumulative_question_stats:
-                    cumulative_question_stats[question_id] = {"correct": 0, "incorrect": 0}
+                    cumulative_question_stats[question_id] = {"correct": 0, "incorrect": 0, "class_breakdown": {}}
                 cumulative_question_stats[question_id]["correct"] += question_data.get("correct", 0)
                 cumulative_question_stats[question_id]["incorrect"] += question_data.get("incorrect", 0)
-            
+
+                for class_name, class_data in section_stats.get("class_stats", {}).items():
+                    if class_name not in cumulative_question_stats[question_id]["class_breakdown"]:
+                        cumulative_question_stats[question_id]["class_breakdown"][class_name] = {"correct": 0, "incorrect": 0}
+                    cumulative_question_stats[question_id]["class_breakdown"][class_name]["correct"] += class_data.get("correct", 0)
+                    cumulative_question_stats[question_id]["class_breakdown"][class_name]["incorrect"] += class_data.get("incorrect", 0)
+
             # Class-based stats
             for class_name, class_data in section_stats.get("class_stats", {}).items():
                 if class_name not in cumulative_class_stats:
@@ -316,23 +335,46 @@ class QuizManager:
 
         # Display question-based statistics
         print("\n--- Question-Based Statistics ---")
-        question_table = []
         for question_id, stats in cumulative_question_stats.items():
+            question_table = []
+            print(f"\nStatistics for Question {question_id}:")
+
+            # Class-specific stats for this question
+            for class_name, class_stats in stats["class_breakdown"].items():
+                total = class_stats["correct"] + class_stats["incorrect"]
+                success_rate = (class_stats["correct"] / total * 100) if total > 0 else 0
+                question_table.append([
+                    class_name,
+                    class_stats["correct"],
+                    class_stats["incorrect"],
+                    f"{success_rate:.2f}%",
+                ])
+
+            # Add overall totals for the question
+            total_correct = stats["correct"]
+            total_incorrect = stats["incorrect"]
+            total_attempts = total_correct + total_incorrect
+            overall_success_rate = (total_correct / total_attempts * 100) if total_attempts > 0 else 0
             question_table.append([
-                f"Question {question_id}",
-                stats["correct"],
-                stats["incorrect"]
+                "Overall",
+                total_correct,
+                total_incorrect,
+                f"{overall_success_rate:.2f}%",
             ])
-        print(tabulate(question_table, headers=["Question", "Correct", "Incorrect"], tablefmt="grid"))
+
+            # Display question-specific table
+            print(tabulate(question_table, headers=["Class", "Correct", "Incorrect", "Success Rate"], tablefmt="grid"))
 
         # Display class-based comparison
-        print("\n--- Class-Based Comparison ---")
+        print("\n--- Class-Based Comparison (Overall Section) ---")
         class_table = []
         for class_name, stats in cumulative_class_stats.items():
             total = stats["correct"] + stats["incorrect"]
             success_rate = (stats["correct"] / total * 100) if total > 0 else 0
-            class_table.append([class_name, f"{success_rate:.2f}"])
-        print(tabulate(class_table, headers=["Class", "Success (%)"], tablefmt="grid"))
+            class_table.append([class_name, stats["correct"], stats["incorrect"], f"{success_rate:.2f}%"])
+
+        print(tabulate(class_table, headers=["Class", "Correct", "Incorrect", "Success Rate"], tablefmt="grid"))
+
 
     def load_user_data(self) -> Dict:
         """Load user data from a JSON file."""
@@ -364,7 +406,9 @@ class QuizManager:
             while True:
                 answer = input("Your answer (1 or 2): ").strip()
                 if answer in ['1', '2']:
-                    return answer  # Kullanıcının cevabını döndür
+                    return answer  # User's answer
+                else:
+                    print("Invalid input. Please enter 1 or 2.")
 
         elif question.type == "single_choice":
             for i, option in enumerate(question.options, 1):
@@ -372,7 +416,9 @@ class QuizManager:
             while True:
                 answer = input("Your answer (enter number): ").strip()
                 if answer.isdigit() and 1 <= int(answer) <= len(question.options):
-                    return answer  # Kullanıcının cevabını döndür
+                    return answer  # User's answer
+                else:
+                    print(f"Invalid input. Please enter a number between 1 and {len(question.options)}.")
 
         elif question.type == "multiple_choice":
             for i, option in enumerate(question.options, 1):
@@ -381,28 +427,30 @@ class QuizManager:
                 answer = input("Your answers (enter numbers separated by commas): ").strip()
                 answers = [a.strip() for a in answer.split(',')]
                 if all(a.isdigit() and 1 <= int(a) <= len(question.options) for a in answers):
-                    return answers  # Liste olarak döndür
+                    return answers  # User's answers
+                else:
+                    print("Invalid input. Please enter valid numbers separated by commas.")
 
 
     def run_quiz(self):
         """Main quiz execution with signup/signin options."""
-        print("Welcome to Multi-Section Quiz Application")
-        print("1. Signup")
-        print("2. Signin")
-        choice = input("Choose an option (1 or 2): ").strip()
+        while True:  # Loop until the user makes a valid choice
+            print("Welcome to Multi-Section Quiz Application")
+            print("1. Signup")
+            print("2. Signin")
+            choice = input("Choose an option (1 or 2): ").strip()
 
-        if choice == "1":
-            if not self.signup():
-                return
-        elif choice == "2":
-            if not self.signin():
-                return
-        else:
-            print("Invalid choice. Exiting.")
-            return
+            if choice == "1":
+                if self.signup():  # Proceed only if signup is successful
+                    break
+            elif choice == "2":
+                if self.signin():  # Proceed only if signin is successful
+                    break
+            else:
+                print("Invalid choice. Please choose a valid option.\n")
 
         while True:
-            # Kullanıcı giriş yaptıktan sonra seçenekler
+            # Display post-login options
             print("\n1. View Previous Results")
             print("2. Start New Quiz")
             print("3. Logout")
@@ -412,12 +460,12 @@ class QuizManager:
                 self.view_previous_results()
             elif option == "2":
                 self.start_new_quiz()
-                break  # Sınav tamamlandığında döngüden çık
+                break  # Exit loop after starting the quiz
             elif option == "3":
                 print("Logged out successfully. Goodbye!")
                 break
             else:
-                print("Invalid choice. Please choose again.")
+                print("Invalid choice. Please choose again.\n")
 
     def view_previous_results(self):
         """Display the user's previous quiz results in a tabular format."""
