@@ -7,7 +7,8 @@ import os
 from dataclasses import dataclass, asdict
 import bcrypt
 from tabulate import tabulate
-from dotenv import load_dotenv 
+from dotenv import load_dotenv
+import uuid
 
 
 # Ortam değişkenlerini .env dosyasından yükle 
@@ -46,12 +47,13 @@ class Question:
 
 @dataclass
 class User:
+    student_id: str  # Benzersiz kimlik numarası
     name: str
     surname: str
     hashed_password: str
     role: str = "student"
     assigned_section: Union[int, None] = None
-    user_class: Union[str, None] = None  # Daha önce 'class' idi
+    user_class: Union[str, None] = None
     attempt_count: int = 0
     last_attempt: str = ""
 
@@ -128,11 +130,14 @@ class QuizManager:
 
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
         user_data = self.load_user_data()
-        user_key = f"{name.lower()}_{surname.lower()}"
 
-        if user_key in user_data.get("users", {}):
-            print("User already exists. Please log in.")
-            return False
+        # Benzersiz bir öğrenci ID'si oluştur
+        import uuid
+        student_id = str(uuid.uuid4())
+
+        # Eğer ID zaten varsa yeni bir ID oluştur (çok düşük bir ihtimal ama önlem olarak)
+        while student_id in user_data.get("users", {}):
+            student_id = str(uuid.uuid4())
 
         if role == "teacher":
             while True:
@@ -146,6 +151,7 @@ class QuizManager:
                     print("Invalid input. Please enter a valid number.")
 
             new_user = User(
+                student_id=student_id,
                 name=name,
                 surname=surname,
                 hashed_password=hashed_password.decode('utf-8'),
@@ -155,6 +161,7 @@ class QuizManager:
         elif role == "student":
             user_class = input("Enter class (e.g., 7-A): ").strip()
             new_user = User(
+                student_id=student_id,
                 name=name,
                 surname=surname,
                 hashed_password=hashed_password.decode('utf-8'),
@@ -164,39 +171,40 @@ class QuizManager:
 
         if "users" not in user_data:
             user_data["users"] = {}
-        user_data["users"][user_key] = asdict(new_user)
+        # Kullanıcıyı benzersiz ID ile kaydet
+        user_data["users"][student_id] = asdict(new_user)
 
         self.user = new_user
         self.save_user_data(user_data)
-        print("Signup successful!")
+        print(f"Signup successful! Your Student ID is: {student_id}")
         return True
 
     def signin(self) -> bool:
         """Sign in an existing user."""
-        name = input("Enter your first name: ").strip()
-        surname = input("Enter your last name: ").strip()
+        student_id = input("Enter your Student ID: ").strip()
         password = input("Enter your password: ").strip()
 
         user_data = self.load_user_data()
-        user_key = f"{name.lower()}_{surname.lower()}"
 
-        if user_key not in user_data.get("users", {}):
-            print("User does not exist. Please sign up.")
+        # Kullanıcıyı ID ile kontrol et
+        if student_id not in user_data.get("users", {}):
+            print("Invalid Student ID. Please try again.")
             return False
 
-        user_dict = user_data["users"][user_key]
+        user_dict = user_data["users"][student_id]
         if not bcrypt.checkpw(password.encode('utf-8'), user_dict["hashed_password"].encode('utf-8')):
             print("Incorrect password. Please try again.")
             return False
 
-        # Directly map the dictionary values to User class attributes
+        # Kullanıcıyı `User` sınıfına dönüştür
         self.user = User(
+            student_id=student_id,
             name=user_dict["name"],
             surname=user_dict["surname"],
             hashed_password=user_dict["hashed_password"],
             role=user_dict.get("role", "student"),
             assigned_section=user_dict.get("assigned_section"),
-            user_class=user_dict.get("user_class"),  # 'class' -> 'user_class'
+            user_class=user_dict.get("user_class"),
             attempt_count=user_dict.get("attempt_count", 0),
             last_attempt=user_dict.get("last_attempt", ""),
         )
@@ -209,6 +217,7 @@ class QuizManager:
             print("Invalid role.")
             return False
         return True
+
 
     def add_or_update_question(self, section_number: int):
         """Add or update a question and its answer key."""
