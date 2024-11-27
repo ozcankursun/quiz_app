@@ -7,7 +7,11 @@ import os
 from dataclasses import dataclass, asdict
 import bcrypt
 from tabulate import tabulate
+from dotenv import load_dotenv 
 
+
+# Ortam değişkenlerini .env dosyasından yükle 
+load_dotenv()
 # Retrieve values from environment variables
 TIME_LIMIT = int(os.getenv("TIME_LIMIT", 300))  # Default to 300 seconds if not set
 ATTEMPT_LIMIT = int(os.getenv("ATTEMPT_LIMIT", 3))  # Default to 3 attempts if not set
@@ -28,6 +32,9 @@ def save_answer_keys(answer_keys: Dict):
     os.makedirs("answers", exist_ok=True)
     with open("answers/answers.json", 'w', encoding='utf-8') as f:
         json.dump(answer_keys, f, indent=4, ensure_ascii=False)
+
+
+
 
 @dataclass
 class Question:
