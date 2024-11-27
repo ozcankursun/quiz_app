@@ -7,9 +7,6 @@
                 "True",
                 "False"
             ],
-            "correct_answers": [
-                "1"
-            ],
             "points": 20,
             "type": "true_false"
         },
@@ -21,9 +18,6 @@
                 "Destructor",
                 "Iterator",
                 "Generator"
-            ],
-            "correct_answers": [
-                "1"
             ],
             "points": 20,
             "type": "single_choice"
@@ -37,11 +31,6 @@
                 "list(list1)",
                 "list.duplicate()"
             ],
-            "correct_answers": [
-                1,
-                2,
-                3
-            ],
             "points": 20,
             "type": "multiple_choice"
         },
@@ -54,9 +43,6 @@
                 "None",
                 "Error"
             ],
-            "correct_answers": [
-                "2"
-            ],
             "points": 20,
             "type": "single_choice"
         },
@@ -66,9 +52,6 @@
             "options": [
                 "True",
                 "False"
-            ],
-            "correct_answers": [
-                "1"
             ],
             "points": 20,
             "type": "true_false"

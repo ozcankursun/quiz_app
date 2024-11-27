@@ -1,12 +1,5 @@
 {
     "users": {
-        "ozcan_python": {
-            "name": "Ozcan",
-            "surname": "Python",
-            "hashed_password": "$2b$12$ehoHrk0I1YQJMqOgUJfWRe6F4DYIua2TNpgqCVJAfZx4xj9KlbhvG",
-            "role": "teacher",
-            "assigned_section": 1
-        },
         "omer_html": {
             "name": "Omer",
             "surname": "Html",
@@ -54,6 +47,36 @@
             "class": "7-D",
             "attempt_count": 0,
             "last_attempt": ""
+        },
+        "test_user": {
+            "name": "Test",
+            "surname": "User",
+            "hashed_password": "$2b$12$OFiJWJE4ZGAvGVdvYhepSOwzSyIijdt55jp9GMapXvByjNsogyBKK",
+            "role": "student",
+            "assigned_section": null,
+            "user_class": "7-A",
+            "attempt_count": 0,
+            "last_attempt": ""
+        },
+        "ozcan_python": {
+            "name": "Ozcan",
+            "surname": "Python",
+            "hashed_password": "$2b$12$7/GqV.mpnFl5YudqU7Lyr.YZHJb9zm.rns.NqExCAnd23CvtbY/xe",
+            "role": "teacher",
+            "assigned_section": 1,
+            "user_class": null,
+            "attempt_count": 0,
+            "last_attempt": ""
+        },
+        "a_a": {
+            "name": "a",
+            "surname": "a",
+            "hashed_password": "$2b$12$6HrxVheoHC35Z6xzgdEaCeFq.MF8RfUxaX/2QFpecEdbKoS2KZUdq",
+            "role": "student",
+            "assigned_section": null,
+            "user_class": "7-A",
+            "attempt_count": 1,
+            "last_attempt": "2024-11-26T17:01:20.963483"
         }
     }
 }
