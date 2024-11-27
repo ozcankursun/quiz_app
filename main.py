@@ -493,63 +493,52 @@ class QuizManager:
             results_data = json.load(f)
 
         student_key = f"{self.user.name.lower()}_{self.user.surname.lower()}"
-        found_results = False
+        student_results = results_data.get("results", {}).get(student_key, {}).get("attempts", [])
 
-        for date, data in results_data["results"].items():
-            student_results = data.get("student_results", {}).get(student_key)
-            if student_results:
-                found_results = True
-                print(f"\n=== Results for {date} ===")
-                print(f"Name: {student_results['name']} {student_results['surname']}")
-                print(f"Class: {student_results['class'] if student_results['class'] else 'N/A'}")
-
-                # Prepare table data for section scores
-                headers = ["Section", "Correct", "Wrong", "Class Average", "School Average", "Score", "Comparison"]
-                table_data = []
-                for section, score in student_results['section_scores'].items():
-                    section_number = section.split()[-1]  # "Section 1" -> "1"
-                    section_data = data["section_statistics"].get(section_number, {})
-                    question_stats = section_data.get("question_stats", {})
-                    class_stats = section_data.get("class_stats", {}).get(self.user.user_class, {})
-                    overall_stats = section_data.get("overall", {})
-
-                    correct = sum(stat["correct"] for stat in question_stats.values())
-                    incorrect = sum(stat["incorrect"] for stat in question_stats.values())
-
-                    # Sınıf ortalamasını hesapla, eğer veri yoksa varsayılan 50 olarak belirle
-                    class_total = class_stats.get("correct", 0) + class_stats.get("incorrect", 0)
-                    if class_total == 0:
-                        class_average = 50.0  # Varsayılan değer
-                    else:
-                        class_average = (class_stats.get("correct", 0) / class_total) * 100
-
-                    # Okul ortalamasını hesapla
-                    school_total = overall_stats.get("correct", 0) + overall_stats.get("incorrect", 0)
-                    school_average = (overall_stats.get("correct", 0) / school_total * 100) if school_total > 0 else 0
-
-                    # Kullanıcı performans karşılaştırması
-                    comparison = "Above Average" if score > class_average else "Below Average"
-
-                    row = [
-                        section,
-                        correct,
-                        incorrect,
-                        round(class_average, 2),
-                        round(school_average, 2),
-                        f"{score:.2f}",
-                        comparison
-                    ]
-                    table_data.append(row)
-
-                # Display table
-                print(tabulate(table_data, headers=headers, tablefmt="grid"))
-
-                # Overall Score and Status
-                print(f"\nOverall Score: {round(student_results['overall_score'], 2)}%")
-                print(f"Status: {student_results['status']}")
-
-        if not found_results:
+        if not student_results:
             print("\nNo previous results found.")
+            return
+
+        for attempt in student_results:
+            print(f"\n=== Attempt {attempt['attempt_id']} ({attempt['date']}) ===")
+            print(f"Overall Score: {attempt['overall_score']:.2f}%")
+            print(f"Status: {attempt['status']}")
+
+            headers = ["Section", "Score", "Class Avg", "School Avg", "Comparison"]
+            table_data = []
+
+            for section, score in attempt["section_scores"].items():
+                section_number = section.split()[-1]  # "Section 1" -> "1"
+                section_data = results_data.get("section_statistics", {}).get(section_number, {})
+                class_stats = section_data.get("class_stats", {}).get(self.user.user_class, {})
+                overall_stats = section_data.get("overall", {})
+
+                # Sınıf ortalaması
+                class_total = class_stats.get("correct", 0) + class_stats.get("incorrect", 0)
+                class_average = (class_stats.get("correct", 0) / class_total * 100) if class_total > 0 else 50
+
+                # Okul ortalaması
+                school_total = overall_stats.get("correct", 0) + overall_stats.get("incorrect", 0)
+                school_average = (overall_stats.get("correct", 0) / school_total * 100) if school_total > 0 else 50
+
+                # Karşılaştırma
+                comparison = "Above Average" if score > class_average else "Below Average"
+
+                table_data.append([
+                    section,
+                    f"{score:.2f}%",
+                    f"{class_average:.2f}%",
+                    f"{school_average:.2f}%",
+                    comparison
+                ])
+
+            print(tabulate(table_data, headers=headers, tablefmt="grid"))
+
+            # Genel karşılaştırma
+            overall_class_average = sum(row[2] for row in table_data) / len(table_data)
+            overall_comparison = "Above Average" if attempt["overall_score"] > overall_class_average else "Below Average"
+            print(f"\nOverall Performance: {overall_comparison} compared to class average.\n")
+
 
     def start_new_quiz(self):
         """Start a new quiz for the logged-in user."""
@@ -627,6 +616,7 @@ class QuizManager:
         self.save_results(overall_score)
 
     def save_results(self, overall_score=0):
+        """Save the results of the quiz to results.json."""
         results_file = "results/results.json"
         if not os.path.exists("results"):
             os.makedirs("results")
@@ -637,57 +627,28 @@ class QuizManager:
         except (FileNotFoundError, json.JSONDecodeError):
             results_json = {"results": {}}
 
-        date_key = datetime.now().strftime("%Y-%m-%d")
-        if date_key not in results_json["results"]:
-            results_json["results"][date_key] = {
-                "student_results": {},
-                "section_statistics": {},
-            }
-
+        # Öğrenciye ait anahtar
         student_key = f"{self.user.name.lower()}_{self.user.surname.lower()}"
-        results_json["results"][date_key]["student_results"][student_key] = {
-            "name": self.user.name,
-            "surname": self.user.surname,
-            "class": self.user.user_class,
+
+        # Öğrencinin deneme sayısını güncelle
+        user_data = results_json["results"].setdefault(student_key, {"attempts": []})
+        attempt_id = len(user_data["attempts"]) + 1  # Yeni deneme için ID
+
+        # Yeni deneme sonuçlarını kaydet
+        user_data["attempts"].append({
+            "attempt_id": attempt_id,
+            "date": datetime.now().strftime("%Y-%m-%d"),
             "section_scores": self.results,
             "overall_score": overall_score,
             "status": "PASSED" if overall_score >= 75 else "FAILED"
-        }
+        })
 
-        section_statistics = results_json["results"][date_key]["section_statistics"]
-        for section, score in self.results.items():
-            section_number = section.split()[-1]  # "Section 1" -> "1"
-            section_data = section_statistics.setdefault(section_number, {
-                "question_stats": {},
-                "class_stats": {},
-                "overall": {"correct": 0, "incorrect": 0},
-            })
-
-            for question_id, user_answer in self.sections[int(section_number) - 1].user_answers.items():
-                question_stats = section_data["question_stats"].setdefault(question_id, {"correct": 0, "incorrect": 0})
-                correct_answers = load_answer_keys()["answers"][f"section{section_number}"].get(question_id, [])
-
-                if isinstance(user_answer, list):
-                    correct = len(set(map(str, user_answer)) & set(map(str, correct_answers))) == len(correct_answers)
-                else:
-                    correct = user_answer.strip() in correct_answers
-
-                if correct:
-                    question_stats["correct"] += 1
-                    section_data["overall"]["correct"] += 1
-                else:
-                    question_stats["incorrect"] += 1
-                    section_data["overall"]["incorrect"] += 1
-
-            class_name = self.user.user_class or "Unknown"
-            class_stats = section_data["class_stats"].setdefault(class_name, {"correct": 0, "incorrect": 0})
-            class_stats["correct"] = section_data["overall"]["correct"]
-            class_stats["incorrect"] = section_data["overall"]["incorrect"]
-
+        # Dosyayı kaydet
         with open(results_file, 'w', encoding='utf-8') as f:
             json.dump(results_json, f, indent=4, ensure_ascii=False)
 
         print("Results saved successfully.")
+
 
 
 
