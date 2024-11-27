@@ -60,13 +60,14 @@
         },
         "121": {
             "student_id": "121",
-            "name": "Durak",
-            "surname": "Okur",
-            "hashed_password": "$2b$12$tsWohGZAijuD/BxzsLVl5ueD1/tYGCstLn3ifd6eQFAZva/EMGedi",
+            "name": "a",
+            "surname": "a",
+            "hashed_password": "$2b$12$V5RNeJoxlH6RHjWSxJPPT.vdgEU6gFf5w0JXzUqnnKV98y/EXbOxe",
             "role": "student",
-            "user_class": "7-B",
-            "attempt_count": 0,
-            "last_attempt": ""
+            "assigned_section": null,
+            "user_class": "7-A",
+            "attempt_count": 2,
+            "last_attempt": "2024-11-27T20:51:46.526437"
         }
     }
 }

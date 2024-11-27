@@ -360,29 +360,19 @@ class QuizManager:
                 print("Results file is corrupted.")
                 return
 
-        # 'section_statistics' anahtarını kontrol edin
-        if "section_statistics" not in results_data:
-            results_data["section_statistics"] = {}
-
         cumulative_question_stats = {}
         cumulative_class_stats = {}
 
-        # Aggregate data from all dates for the specified section
+        # Tüm tarihlerdeki section_statistics verilerini birleştirin
         for date, stats in results_data.get("results", {}).items():
             section_stats = stats.get("section_statistics", {}).get(str(section_number), {})
 
             # Question-based stats
             for question_id, question_data in section_stats.get("question_stats", {}).items():
                 if question_id not in cumulative_question_stats:
-                    cumulative_question_stats[question_id] = {"correct": 0, "incorrect": 0, "class_breakdown": {}}
+                    cumulative_question_stats[question_id] = {"correct": 0, "incorrect": 0}
                 cumulative_question_stats[question_id]["correct"] += question_data.get("correct", 0)
                 cumulative_question_stats[question_id]["incorrect"] += question_data.get("incorrect", 0)
-
-                for class_name, class_data in section_stats.get("class_stats", {}).items():
-                    if class_name not in cumulative_question_stats[question_id]["class_breakdown"]:
-                        cumulative_question_stats[question_id]["class_breakdown"][class_name] = {"correct": 0, "incorrect": 0}
-                    cumulative_question_stats[question_id]["class_breakdown"][class_name]["correct"] += class_data.get("correct", 0)
-                    cumulative_question_stats[question_id]["class_breakdown"][class_name]["incorrect"] += class_data.get("incorrect", 0)
 
             # Class-based stats
             for class_name, class_data in section_stats.get("class_stats", {}).items():
@@ -396,44 +386,19 @@ class QuizManager:
         for question_id, stats in cumulative_question_stats.items():
             question_table = []
             print(f"\nStatistics for Question {question_id}:")
-
-            # Class-specific stats for this question
-            for class_name, class_stats in stats["class_breakdown"].items():
-                total = class_stats["correct"] + class_stats["incorrect"]
-                success_rate = (class_stats["correct"] / total * 100) if total > 0 else 0
-                question_table.append([
-                    class_name,
-                    class_stats["correct"],
-                    class_stats["incorrect"],
-                    f"{success_rate:.2f}%",
-                ])
-
-            # Add overall totals for the question
-            total_correct = stats["correct"]
-            total_incorrect = stats["incorrect"]
-            total_attempts = total_correct + total_incorrect
-            overall_success_rate = (total_correct / total_attempts * 100) if total_attempts > 0 else 0
-            question_table.append([
-                "Overall",
-                total_correct,
-                total_incorrect,
-                f"{overall_success_rate:.2f}%",
-            ])
-
-            # Display question-specific table
+            total_attempts = stats["correct"] + stats["incorrect"]
+            success_rate = (stats["correct"] / total_attempts * 100) if total_attempts > 0 else 0
+            question_table.append(["Overall", stats["correct"], stats["incorrect"], f"{success_rate:.2f}%"])
             print(tabulate(question_table, headers=["Class", "Correct", "Incorrect", "Success Rate"], tablefmt="grid"))
 
         # Display class-based comparison
         print("\n--- Class-Based Comparison (Overall Section) ---")
         class_table = []
         for class_name, stats in cumulative_class_stats.items():
-            total = stats["correct"] + stats["incorrect"]
-            success_rate = (stats["correct"] / total * 100) if total > 0 else 0
+            total_attempts = stats["correct"] + stats["incorrect"]
+            success_rate = (stats["correct"] / total_attempts * 100) if total_attempts > 0 else 0
             class_table.append([class_name, stats["correct"], stats["incorrect"], f"{success_rate:.2f}%"])
-
         print(tabulate(class_table, headers=["Class", "Correct", "Incorrect", "Success Rate"], tablefmt="grid"))
-
-
 
     def load_user_data(self) -> Dict:
         """Load user data from a JSON file."""
@@ -607,12 +572,11 @@ class QuizManager:
             overall_comparison = "Above Average" if attempt["overall_score"] > overall_class_average else "Below Average"
             print(f"\nOverall Performance: {overall_comparison} compared to class average.\n")
 
-
     def start_new_quiz(self):
         """Start a new quiz for the logged-in user."""
         # Kullanıcı sınav hakkını kontrol et
         if self.user.attempt_count >= self.attempt_limit:  # ATTEMPT_LIMIT is determined in .env file
-            print("\nYou have exceeded the maximum number of attempts. You cannot start a new quiz.")
+            print(f"\nYou have exceeded the maximum number of attempts ({self.attempt_limit}). You cannot start a new quiz.")
             return
 
         print("\nExam Instructions:")
@@ -656,14 +620,14 @@ class QuizManager:
         if quiz_completed:
             self.user.attempt_count += 1
             user_data = self.load_user_data()
-            user_key = f"{self.user.name.lower()}_{self.user.surname.lower()}"
+            user_key = self.user.student_id if self.user.role == "student" else f"{self.user.name.lower()}_{self.user.surname.lower()}"
             if user_key in user_data["users"]:
                 user_data["users"][user_key]["attempt_count"] = self.user.attempt_count
                 user_data["users"][user_key]["last_attempt"] = datetime.now().isoformat()
                 self.save_user_data(user_data)
 
-
     def calculate_final_results(self, time_up=False):
+        """Calculate and display final quiz results."""
         if not self.results:
             print("\nTime's up! No sections were completed.")
             self.save_results(overall_score=0)  # Hiç bölüm tamamlanmadıysa
@@ -682,6 +646,42 @@ class QuizManager:
             print("Note: The quiz ended because the time limit was reached.")
         
         self.save_results(overall_score)
+
+    def update_section_statistics(self, date_data):
+        """Update section statistics based on the latest quiz results."""
+        section_statistics = date_data["section_statistics"]
+
+        for section_key, score in self.results.items():
+            section_number = section_key.split()[-1]  # "Section 1" -> "1"
+            section_data = section_statistics.setdefault(section_number, {
+                "question_stats": {},
+                "class_stats": {}
+            })
+
+            # Güncel kullanıcı sınıfı
+            user_class = self.user.user_class or "Unknown"
+
+            # Her soruya göre doğru/yanlış bilgisi ekle
+            for question_id, user_answer in self.sections[int(section_number) - 1].user_answers.items():
+                question_stats = section_data["question_stats"].setdefault(question_id, {"correct": 0, "incorrect": 0})
+                correct_answers = load_answer_keys()["answers"][f"section{section_number}"].get(question_id, [])
+
+                # Doğru yanıt kontrolü
+                if isinstance(user_answer, list):  # Çoktan seçmeli
+                    correct = len(set(map(str, user_answer)) & set(map(str, correct_answers))) == len(correct_answers)
+                else:
+                    correct = user_answer.strip() in correct_answers
+
+                if correct:
+                    question_stats["correct"] += 1
+                else:
+                    question_stats["incorrect"] += 1
+
+            # Sınıf bazlı istatistikleri güncelle
+            class_stats = section_data["class_stats"].setdefault(user_class, {"correct": 0, "incorrect": 0})
+            class_stats["correct"] += sum(1 for q in section_data["question_stats"].values() if q["correct"])
+            class_stats["incorrect"] += sum(1 for q in section_data["question_stats"].values() if q["incorrect"])
+
 
     def save_results(self, overall_score=0):
         """Save the results of the quiz to results.json."""
@@ -710,6 +710,11 @@ class QuizManager:
             "overall_score": overall_score,
             "status": "PASSED" if overall_score >= 75 else "FAILED"
         })
+
+        # Tarih bazlı section_statistics'i güncelle
+        date_key = datetime.now().strftime("%Y-%m-%d")
+        date_data = results_json["results"].setdefault(date_key, {"section_statistics": {}})
+        self.update_section_statistics(date_data)
 
         # Dosyayı kaydet
         with open(results_file, 'w', encoding='utf-8') as f:
