@@ -1,71 +1,79 @@
 {
     "users": {
-        "omer_html": {
+        "3fe43733-74e6-4740-9192-9d398a60f6d1": {
+            "student_id": "3fe43733-74e6-4740-9192-9d398a60f6d1",
             "name": "Omer",
             "surname": "Html",
             "hashed_password": "$2b$12$ehoHrk0I1YQJMqOgUJfWRe6F4DYIua2TNpgqCVJAfZx4xj9KlbhvG",
             "role": "teacher",
-            "assigned_section": 2
+            "assigned_section": 2,
+            "user_class": null,
+            "attempt_count": 0,
+            "last_attempt": ""
         },
-        "emrah_java": {
+        "ae83c175-94dd-42d8-a6fb-5eb6d74da115": {
+            "student_id": "ae83c175-94dd-42d8-a6fb-5eb6d74da115",
             "name": "Emrah",
             "surname": "Java",
             "hashed_password": "$2b$12$ehoHrk0I1YQJMqOgUJfWRe6F4DYIua2TNpgqCVJAfZx4xj9KlbhvG",
             "role": "teacher",
-            "assigned_section": 3
+            "assigned_section": 3,
+            "user_class": null,
+            "attempt_count": 0,
+            "last_attempt": ""
         },
-        "fahri_sql": {
+        "e4bbd190-3896-420f-a540-34aaa4410b1e": {
+            "student_id": "e4bbd190-3896-420f-a540-34aaa4410b1e",
             "name": "Fahri",
             "surname": "Sql",
             "hashed_password": "$2b$12$ehoHrk0I1YQJMqOgUJfWRe6F4DYIua2TNpgqCVJAfZx4xj9KlbhvG",
             "role": "teacher",
-            "assigned_section": 4
+            "assigned_section": 4,
+            "user_class": null,
+            "attempt_count": 0,
+            "last_attempt": ""
         },
-        "ali_kaya": {
+        "434f42bf-5359-4e8b-aa14-893393dadfec": {
+            "student_id": "434f42bf-5359-4e8b-aa14-893393dadfec",
             "name": "Ali",
             "surname": "Kaya",
             "hashed_password": "$2b$12$MfQKUiy2oTM0C54Qa2aR4uU/oKAgWJ3EazmsjFpjcxGoZm2H8EPSK",
             "role": "student",
-            "class": "7-A",
+            "assigned_section": null,
+            "user_class": "7-A",
             "attempt_count": 0,
             "last_attempt": ""
         },
-        "ayse_dag": {
+        "a0e791de-c3d6-4099-8559-567d936f88b0": {
+            "student_id": "a0e791de-c3d6-4099-8559-567d936f88b0",
             "name": "Ayse",
             "surname": "Dag",
             "hashed_password": "$2b$12$MfQKUiy2oTM0C54Qa2aR4uU/oKAgWJ3EazmsjFpjcxGoZm2H8EPSK",
             "role": "student",
-            "class": "7-B",
+            "assigned_section": null,
+            "user_class": "7-B",
             "attempt_count": 0,
             "last_attempt": ""
         },
-        "elif_yildiz": {
+        "bac93a85-3be9-4443-8a93-6e1f432d1fde": {
+            "student_id": "bac93a85-3be9-4443-8a93-6e1f432d1fde",
             "name": "Elif",
             "surname": "Yildiz",
             "hashed_password": "$2b$12$MfQKUiy2oTM0C54Qa2aR4uU/oKAgWJ3EazmsjFpjcxGoZm2H8EPSK",
             "role": "student",
-            "class": "7-D",
+            "assigned_section": null,
+            "user_class": "7-D",
             "attempt_count": 0,
             "last_attempt": ""
         },
-        "ozcan_python": {
+        "82a92ab9-fb96-458a-9396-64b89360f1be": {
+            "student_id": "82a92ab9-fb96-458a-9396-64b89360f1be",
             "name": "Ozcan",
             "surname": "Python",
             "hashed_password": "$2b$12$7/GqV.mpnFl5YudqU7Lyr.YZHJb9zm.rns.NqExCAnd23CvtbY/xe",
             "role": "teacher",
             "assigned_section": 1,
             "user_class": null,
-            "attempt_count": 0,
-            "last_attempt": ""
-        },
-        "6967a61a-ff3b-4c84-bf51-873d079eb649": {
-            "student_id": "6967a61a-ff3b-4c84-bf51-873d079eb649",
-            "name": "a",
-            "surname": "a",
-            "hashed_password": "$2b$12$FCne3IlU91dfu8TrY48WXOh/gYJ80vORGV3Ot1CcF81WQVpGvovKO",
-            "role": "student",
-            "assigned_section": null,
-            "user_class": "7-A",
             "attempt_count": 0,
             "last_attempt": ""
         }

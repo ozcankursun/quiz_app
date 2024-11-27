@@ -35,8 +35,6 @@ def save_answer_keys(answer_keys: Dict):
         json.dump(answer_keys, f, indent=4, ensure_ascii=False)
 
 
-
-
 @dataclass
 class Question:
     id: int
@@ -117,10 +115,20 @@ class QuizManager:
 
     def signup(self) -> bool:
         """Sign up a new user."""
+        while True:
+            try:
+                student_id = int(input("Enter your Student ID: ").strip())
+                if len(str(student_id)) in [3, 4]:  # ID uzunluğu kontrolü (3 veya 4 basamaklı olmalı)
+                    break
+                else:
+                    print("Invalid ID. Please enter a 3 or 4 digit Student ID.")
+            except ValueError:
+                print("Invalid input. Please enter a numeric Student ID.")
+
         name = input("Enter your first name: ").strip()
         surname = input("Enter your last name: ").strip()
         password = input("Set your password: ").strip()
-        
+
         while True:
             role = input("Enter role (teacher/student): ").strip().lower()
             if role in ["teacher", "student"]:
@@ -131,27 +139,13 @@ class QuizManager:
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
         user_data = self.load_user_data()
 
-        # Benzersiz bir öğrenci ID'si oluştur
-        import uuid
-        student_id = str(uuid.uuid4())
-
-        # Eğer ID zaten varsa yeni bir ID oluştur (çok düşük bir ihtimal ama önlem olarak)
-        while student_id in user_data.get("users", {}):
-            student_id = str(uuid.uuid4())
+        if str(student_id) in user_data.get("users", {}):
+            print("Student ID already exists. Please sign in or use a different ID.")
+            return False
 
         if role == "teacher":
-            while True:
-                try:
-                    assigned_section = int(input("Enter assigned section (1-4): ").strip())
-                    if 1 <= assigned_section <= 4:
-                        break
-                    else:
-                        print("Invalid input. Please enter a number between 1 and 4.")
-                except ValueError:
-                    print("Invalid input. Please enter a valid number.")
-
+            assigned_section = int(input("Enter assigned section (1-4): ").strip())
             new_user = User(
-                student_id=student_id,
                 name=name,
                 surname=surname,
                 hashed_password=hashed_password.decode('utf-8'),
@@ -161,7 +155,6 @@ class QuizManager:
         elif role == "student":
             user_class = input("Enter class (e.g., 7-A): ").strip()
             new_user = User(
-                student_id=student_id,
                 name=name,
                 surname=surname,
                 hashed_password=hashed_password.decode('utf-8'),
@@ -171,24 +164,32 @@ class QuizManager:
 
         if "users" not in user_data:
             user_data["users"] = {}
-        # Kullanıcıyı benzersiz ID ile kaydet
-        user_data["users"][student_id] = asdict(new_user)
+
+        # Öğrenci numarasını kullanıcı anahtarı olarak kullanıyoruz
+        user_data["users"][str(student_id)] = asdict(new_user)
 
         self.user = new_user
         self.save_user_data(user_data)
-        print(f"Signup successful! Your Student ID is: {student_id}")
+        print("Signup successful!")
         return True
 
     def signin(self) -> bool:
         """Sign in an existing user."""
-        student_id = input("Enter your Student ID: ").strip()
-        password = input("Enter your password: ").strip()
+        while True:
+            try:
+                student_id = input("Enter your Student ID: ").strip()
+                if student_id.isdigit():
+                    break
+                else:
+                    print("Invalid ID. Please enter a numeric Student ID.")
+            except ValueError:
+                print("Invalid input. Please enter your Student ID.")
 
+        password = input("Enter your password: ").strip()
         user_data = self.load_user_data()
 
-        # Kullanıcıyı ID ile kontrol et
         if student_id not in user_data.get("users", {}):
-            print("Invalid Student ID. Please try again.")
+            print("Student ID does not exist. Please sign up.")
             return False
 
         user_dict = user_data["users"][student_id]
@@ -196,9 +197,8 @@ class QuizManager:
             print("Incorrect password. Please try again.")
             return False
 
-        # Kullanıcıyı `User` sınıfına dönüştür
+        # Kullanıcıyı yükle
         self.user = User(
-            student_id=student_id,
             name=user_dict["name"],
             surname=user_dict["surname"],
             hashed_password=user_dict["hashed_password"],
@@ -217,7 +217,6 @@ class QuizManager:
             print("Invalid role.")
             return False
         return True
-
 
     def add_or_update_question(self, section_number: int):
         """Add or update a question and its answer key."""
